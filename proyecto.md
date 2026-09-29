@@ -23,3 +23,7 @@ Me gusta resolver problemas de lógica y trabajar con bases de datos, y disfruto
 
 ### @a3523110495 (Compañero/a)
 *(Escribe aquí algo que te guste. Por ejemplo: Me gusta mucho aprender cosas nuevas todos los días, colaborar en proyectos escolares y superar retos de programación. En mis ratos libres me dedico a mis pasatiempos favoritos.)*
+
+### Oscar Martinez Martinez
+
+Me apasiona la tecnología y la programación, especialmente el desarrollo de aplicaciones web. Me gusta aprender nuevas herramientas, mejorar mis habilidades como desarrollador y participar en proyectos que permitan resolver problemas reales mediante software.
