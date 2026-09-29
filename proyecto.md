@@ -21,5 +21,5 @@ Me apasiona el desarrollo frontend y el diseño de interfaces, especialmente cre
 ### @felixgarciaf555 (Felix)
 *(Escribe aquí algo que te guste. Por ejemplo: Soy un entusiasta de la tecnología, disfruto armar arquitecturas backend sólidas y mi pasatiempo es aprender sobre inteligencia artificial y ciberseguridad.)*
 
-### @a3523110495 (Compañero/a)
-*(Escribe aquí algo que te guste. Por ejemplo: Me gusta mucho aprender cosas nuevas todos los días, colaborar en proyectos escolares y superar retos de programación. En mis ratos libres me dedico a mis pasatiempos favoritos.)*
+### @a3523110495 (Kevin Rojas)
+Me gusta la tecnología y la programación porque me permiten aprender constantemente y crear soluciones útiles. Disfruto enfrentar nuevos retos, colaborar en equipo y seguir desarrollando mis habilidades.
