@@ -10,7 +10,7 @@ Este archivo es nuestro primer punto de encuentro. Cada integrante del equipo ti
 Me apasiona la estructuración de proyectos de software y la automatización de flujos de trabajo. Me gusta asegurar que los repositorios, los tableros ágiles y las herramientas de desarrollo estén perfectamente sincronizadas para que el equipo trabaje con estándares de calidad profesional desde el primer día.
 
 ### @abrahammorf905 (Abraham)
-*(Escribe aquí algo que te guste. Por ejemplo: Me encanta el desarrollo web, trabajar en equipo y mi pasatiempo favorito es jugar videojuegos o escuchar música mientras programo.)*
+Me gusta la tecnología y la programación porque me permiten aprender cosas nuevas y encontrar soluciones a diferentes problemas. Me interesa seguir mejorando mis habilidades en desarrollo de software y adquirir experiencia trabajando en equipo. Una de mis metas es continuar aprendiendo nuevas tecnologías y participar en proyectos que me ayuden a crecer como programador
 
 ### @irvinmartinealejo (MARTINEZ ALEJO IRVIN ISAEL)
 *(Escribe aquí algo que te guste. Por ejemplo: Disfruto mucho resolver problemas de lógica y bases de datos. En mi tiempo libre me gusta salir, hacer deporte y aprender nuevas tecnologías.)*
