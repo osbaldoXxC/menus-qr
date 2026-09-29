@@ -16,7 +16,7 @@ Me apasiona la estructuración de proyectos de software y la automatización de 
 *(Escribe aquí algo que te guste. Por ejemplo: Disfruto mucho resolver problemas de lógica y bases de datos. En mi tiempo libre me gusta salir, hacer deporte y aprender nuevas tecnologías.)*
 
 ### @katherine-gomez (KATHERINE DANIELA GOMEZ MERINO)
-*(Escribe aquí algo que te guste. Por ejemplo: Me apasiona el diseño de interfaces (UX/UI) y crear aplicaciones que sean muy fáciles de usar para los usuarios finales. Mi meta es dominar el desarrollo frontend.)*
+Me apasiona el desarrollo frontend y el diseño de interfaces, especialmente crear aplicaciones que sean atractivas, claras y fáciles de usar. Me gusta aprender nuevas tecnologías, resolver problemas mediante la programación y seguir mejorando mis habilidades para desarrollar proyectos de software. También disfruto leer, escuchar música y dibujar en mi tiempo libre. Mi meta es seguir creciendo como desarrolladora y crear aplicaciones útiles que tengan una buena experiencia para los usuarios.
 
 ### @felixgarciaf555 (Felix)
 *(Escribe aquí algo que te guste. Por ejemplo: Soy un entusiasta de la tecnología, disfruto armar arquitecturas backend sólidas y mi pasatiempo es aprender sobre inteligencia artificial y ciberseguridad.)*
