@@ -13,7 +13,7 @@ Soy Osbaldo y me apasiona liderar el desarrollo de software aplicando las mejore
 *(Escribe aquí algo que te guste. Por ejemplo: Me encanta el desarrollo web, trabajar en equipo y mi pasatiempo favorito es jugar videojuegos o escuchar música mientras programo.)*
 
 ### @irvinmartinealejo (MARTINEZ ALEJO IRVIN ISAEL)
-*(Escribe aquí algo que te guste. Por ejemplo: Disfruto mucho resolver problemas de lógica y bases de datos. En mi tiempo libre me gusta salir, hacer deporte y aprender nuevas tecnologías.)*
+Me gusta resolver problemas de lógica y trabajar con bases de datos, y disfruto aprender nuevas tecnologías y construir proyectos que se puedan usar en la vida real. En mi tiempo libre me gusta salir y hacer deporte. Mi meta es crecer como desarrollador y aportar a este proyecto trabajando en equipo con buenas prácticas como Git Flow.
 
 ### @katherine-gomez (KATHERINE DANIELA GOMEZ MERINO)
 *(Escribe aquí algo que te guste. Por ejemplo: Me apasiona el diseño de interfaces (UX/UI) y crear aplicaciones que sean muy fáciles de usar para los usuarios finales. Mi meta es dominar el desarrollo frontend.)*
