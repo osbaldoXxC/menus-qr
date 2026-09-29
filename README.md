@@ -191,3 +191,11 @@ Ejemplo: `security(menu): valida ownership antes de exponer datos del restaurant
 ## 📄 Documentación Técnica Formal
 
 Para consultar el registro formal de decisiones arquitectónicas y justificaciones técnicas de la infraestructura en la nube, revisa el ADR-001: [Despliegue en AWS con S3, CloudFront y EC2 Docker](/docs/adr/0001-despliegue-aws-cloudfront-ec2-s3.md).
+
+---
+
+## 👥 Perfil de integrante
+
+### Kevin Rojas
+
+Me gusta la tecnología y la programación porque me permiten aprender constantemente y crear soluciones útiles. Disfruto enfrentar nuevos retos, trabajar en equipo y seguir desarrollando mis habilidades.
