@@ -7,7 +7,7 @@ Este archivo es nuestro primer punto de encuentro. Cada integrante del equipo ti
 ## 👥 Integrantes del Equipo
 
 ### @osbaldoXxC (OSBALDO ALVAREZ MARTINEZ)
-Me apasiona la estructuración de proyectos de software y la automatización de flujos de trabajo. Me gusta asegurar que los repositorios, los tableros ágiles y las herramientas de desarrollo estén perfectamente sincronizadas para que el equipo trabaje con estándares de calidad profesional desde el primer día.
+Soy Osbaldo y me apasiona liderar el desarrollo de software aplicando las mejores prácticas de la industria. Disfruto diseñar arquitecturas robustas, automatizar procesos con GitHub y Linear, y asegurar que el equipo tenga un ecosistema de desarrollo ágil y profesional. ¡Vamos con todo en este proyecto!
 
 ### @abrahammorf905 (Abraham)
 *(Escribe aquí algo que te guste. Por ejemplo: Me encanta el desarrollo web, trabajar en equipo y mi pasatiempo favorito es jugar videojuegos o escuchar música mientras programo.)*
