@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🚀 Proyecto: Sistema Web de Pedidos (Menus-QR)
 
 Este archivo es nuestro primer punto de encuentro. Cada integrante del equipo tiene su propio espacio aquí para escribir un pequeño párrafo sobre lo que más le gusta o le apasiona (tecnología, pasatiempos, metas, etc.).
@@ -23,3 +24,7 @@ Me apasiona el desarrollo frontend y el diseño de interfaces, especialmente cre
 
 ### @a3523110495 (Kevin Rojas)
 Me gusta la tecnología y la programación porque me permiten aprender constantemente y crear soluciones útiles. Disfruto enfrentar nuevos retos, colaborar en equipo y seguir desarrollando mis habilidades.
+=======
+### @vanessahl (VANESSA HERNANDEZ LOPEZ)
+Me gusta TICs por la constante evolución de la tecnología y las infinitas posibilidades que ofrece para crear, automatizar y conectar a las personas.
+>>>>>>> 5cfa87d9d9cf76edb108cb4795bd45a5cef430f4
