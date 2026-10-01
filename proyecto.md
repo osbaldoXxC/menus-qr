@@ -1,1 +1,1 @@
-Kevin Rojas Martinez: Practicando resolucion de conflictos en Git.
+La maestra Julieta es la mejor maestra y nos va a sacar 100.
