@@ -1,1 +1,1 @@
-en este lugar  escriban lo que quieran :Irvin, me gusta la programación y el deporte
+La maestra Julieta es la mejor maestra y nos va a sacar 100.
