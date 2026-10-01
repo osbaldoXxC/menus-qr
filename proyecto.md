@@ -1,1 +1,1 @@
-en este lugar  escriban lo que quieran : este es un renglon de ejemplo para la practiva de julieta
+La maestra Julieta es la mejor maestra y nos va a sacar 100.
