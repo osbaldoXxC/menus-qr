@@ -13,7 +13,7 @@
 El presente informe certifica la finalización exitosa de las responsabilidades directivas y técnicas de **Katherine Daniela Gómez Merino (Kate)** en el área de Infraestructura y CI/CD:
 1. **Infraestructura Base de CI/CD:** Pipeline canónico `.github/workflows/ci.yml` con Node.js 22, backend y matriz de 3 frontends reales (`admin`, `frontend-comensales`, `frontend-restaurantes`) con empaquetado de artefactos `actions/upload-artifact@v4`.
 2. **Issue #29 (Error de Sintaxis YAML):** Completado al 100% (**`CUMPLE`**), con dos ejecuciones reales en GitHub Actions y sus capturas de pantalla auténticas obtenidas mediante Playwright.
-3. **Issue #33 (Comando Inexistente en Linux):** Preparación técnica, diseño de inducción y aislamiento de la rama `feature/issue-33-kate-kevin` completados (**`CUMPLE` en fase DevOps**), reservando expresamente la ejecución, captura y cierre para **Kevin Rojas Martínez**.
+3. **Issue #33 (Comando Inexistente en Linux):** Preparación técnica completada y ejecución/corrección verificadas por **Kevin Rojas Martínez** en `feature/issue-33-kate-kevin`; el runner mostró el error real `command not found` con código `127` y después completó la corrida corregida en verde.
 
 ---
 
@@ -65,8 +65,8 @@ Implementada y validada en GitHub Actions:
 
 ## 5. PREPARACIÓN Y PROCEDIMIENTO RESERVADO PARA KEVIN (ISSUE #33)
 * **Estado de Fase DevOps:** **`CUMPLE` (Preparación terminada)**
-* **Estado de Ejecución:** **`PENDIENTE` (Reservado para Kevin Rojas Martínez)**
-* **Rama preparada:** `feature/issue-33-kate-kevin` (sincronizada con el workflow limpio).
+* **Estado de Ejecución:** **`COMPLETADO` (Kevin Rojas Martínez, 29 de octubre de 2026)**
+* **Rama:** `feature/issue-33-kate-kevin`, publicada con los commits de inducción y corrección; el workflow final quedó limpio.
 
 ### Instrucciones Paso a Paso para Kevin Rojas:
 1. Cambiarse a la rama:
@@ -112,8 +112,8 @@ Implementada y validada en GitHub Actions:
 | **Issue #29: Pipeline Failed** | `evidence/cicd/issue-29/issue-29-failed.png` | **`VERIFICADA`** | Run `40819689060` (60.75 KB). Muestra el rechazo real por sintaxis YAML. |
 | **Issue #29: Pipeline Passed** | `evidence/cicd/issue-29/issue-29-passed.png` | **`VERIFICADA`** | Run `40820241296` (84.19 KB). Muestra los 4 jobs en verde y 3 artefactos subidos. |
 | **Motor Playwright Reusable** | `scripts/capture-evidence.js` | **`VERIFICADA`** | Script modular con Playwright Chromium y validación de cabeceras binarias. |
-| **Issue #33: Fallo Exit 127** | `evidence/cicd/issue-33/issue-33-failed-kevin.png` | **`PENDIENTE`** | Reservada expresamente para la ejecución de Kevin Rojas. |
-| **Issue #33: Corrida Verde** | `evidence/cicd/issue-33/issue-33-passed-kevin.png` | **`PENDIENTE`** | Reservada expresamente para la ejecución de Kevin Rojas. |
+| **Issue #33: Fallo Exit 127** | `evidence/cicd/issue-33/issue-33-failed-kevin.png` | **`VERIFICADA`** | Run `40896488728`; commit `02698632c63b2a77812525525c9e61439ae55b88`. El log muestra `command not found` y exit code `127`. |
+| **Issue #33: Corrida Verde** | `evidence/cicd/issue-33/issue-33-passed-kevin.png` | **`VERIFICADA`** | Run `40897026572`; commit `ff19d85916e92f79fd899664fdf9f0ca52a01f26`. Los 4 jobs finalizaron correctamente. |
 
 ---
 
@@ -123,4 +123,4 @@ Implementada y validada en GitHub Actions:
 * **`chore/actualizar-guia-equipo`:** Resguardo seguro del manual de equipo.
 * **`feature/issue-29-kate-fail-test`:** Conservada temporalmente para auditoría de la corrida `40819689060`.
 * **`feature/issue-29-kate-devops`:** Publicada en `origin/feature/issue-29-kate-devops` con sus dos evidencias reales.
-* **`feature/issue-33-kate-kevin`:** Preparada en local para el turno de Kevin.
+* **`feature/issue-33-kate-kevin`:** Publicada con la prueba temporal (`02698632c63b2a77812525525c9e61439ae55b88`) y la corrección (`ff19d85916e92f79fd899664fdf9f0ca52a01f26`); ejecuciones verificadas `40896488728` (fallo 127) y `40897026572` (éxito).

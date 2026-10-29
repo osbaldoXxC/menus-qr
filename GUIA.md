@@ -436,6 +436,13 @@ El código de salida `127` en sistemas tipo UNIX indica `command not found`. El 
 #### E. Verificación
 El job del runner ejecuta el comando de pruebas directamente y finaliza con código `0` en verde.
 
+#### F. Registro de entrega de Kevin (completado)
+
+| Colaborador | Fase | Commit | Ejecución de GitHub Actions | Evidencia | Resultado |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Kevin Rojas Martínez | Fallo inducido | [0269863](https://github.com/osbaldoXxC/menus-qr/commit/02698632c63b2a77812525525c9e61439ae55b88) | [Run 40896488728](https://github.com/osbaldoXxC/menus-qr/actions/runs/40896488728) | [issue-33-failed-kevin.png](./evidence/cicd/issue-33/issue-33-failed-kevin.png) | `herramienta-inventada-qr: command not found`; el runner mostró exit code `127`. |
+| Kevin Rojas Martínez | Corrección y verificación | [ff19d85](https://github.com/osbaldoXxC/menus-qr/commit/ff19d85916e92f79fd899664fdf9f0ca52a01f26) | [Run 40897026572](https://github.com/osbaldoXxC/menus-qr/actions/runs/40897026572) | [issue-33-passed-kevin.png](./evidence/cicd/issue-33/issue-33-passed-kevin.png) | Los 4 jobs completaron correctamente; pruebas de backend y compilaciones de los 3 frontends en verde. |
+
 ---
 
 ## 7. MATRIZ DE RESUMEN DE CÓDIGOS DE ERROR DE CI/CD
