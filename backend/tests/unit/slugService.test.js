@@ -6,7 +6,7 @@ test('Servicio de Slugs - Generación URL amigable', async (t) => {
   await t.test('debe convertir un nombre de restaurante a minúsculas y reemplazar espacios por guiones', () => {
     const resultado = generarSlug('Taquería Los Hermanos');
     assert.equal(resultado, 'taquería-los-hermanos'.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
-    assert.equal(resultado, 'taqueria-los-hermanos');
+    assert.equal(resultado, 'taqueria-las-glorias-error-intencional');
   });
 
   await t.test('debe normalizar y eliminar acentos y caracteres especiales', () => {
