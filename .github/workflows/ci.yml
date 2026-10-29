@@ -25,11 +25,11 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Ejecutar comando no instalado en el runner
+      - name: Ejecutar pruebas unitarias
         working-directory: backend
-        run: |
-          herramienta-inventada-qr --reporte
-          npm test
+        env:
+          NODE_ENV: test
+        run: npm test
 
   frontends-build:
     name: Frontends - Verificación y Compilación
