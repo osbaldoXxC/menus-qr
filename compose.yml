@@ -1,0 +1,150 @@
+services:
+  postgres:
+    container_name: mexxicanmx_db
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - private-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 2s
+      retries: 3
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - private-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 3
+
+  backend:
+    build: ./backend
+    ports:
+      - "${PORT:-4000}:4000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - ML_SERVICE_URL=${ML_SERVICE_URL:-http://ml-service:8000}
+      - PUBLIC_MENU_URL=http://localhost:3000/menu
+      - FRONTEND_URL=http://localhost:3000
+    networks:
+      - public-net
+      - private-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ml-service:
+    build: ./ml-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ml-service:/app
+    environment:
+      - PORT=8000
+    networks:
+      - public-net
+      - private-net
+
+  frontend-comensales:
+    build:
+      context: ./frontend-comensales
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend-comensales:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
+      - VITE_PUBLIC_MENU_URL=http://localhost:3000/menu
+      - VITE_IMAGES_CDN=http://localhost:4000
+      - VITE_ADMIN_URL=http://localhost:3001
+      - VITE_RESTAURANTES_URL=http://localhost:3002
+    networks:
+      - public-net
+    depends_on:
+      - backend
+
+  frontend-restaurantes:
+    build:
+      context: ./frontend-restaurantes
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${RESTAURANTES_PORT:-3002}:3002"
+    volumes:
+      - ./frontend-restaurantes:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
+      - VITE_PUBLIC_MENU_URL=http://localhost:3000/menu
+      - VITE_IMAGES_CDN=http://localhost:4000
+      - VITE_ADMIN_URL=http://localhost:3001
+      - VITE_COMENSALES_URL=http://localhost:3000
+    networks:
+      - public-net
+    depends_on:
+      - backend
+
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./ai-engine:/app
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    networks:
+      - private-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  admin:
+    build: ./admin
+    ports:
+      - "${ADMIN_PORT:-3001}:3001"
+    volumes:
+      - ./admin:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
+      - VITE_IMAGES_CDN=${CLOUDFRONT_DOMAIN:-http://localhost:4000}
+    networks:
+      - public-net
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  public-net:
+    driver: bridge
+  private-net:
+    driver: bridge
+    internal: true

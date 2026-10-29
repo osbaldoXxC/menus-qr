@@ -1,0 +1,218 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Stack 5 - Compute: Instancia EC2 Ubuntu 24.04 LTS, Volumen EBS 50GB gp3 (DeleteOnTermination=false), EIP y Bootstrap UserData'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: oamdevsol
+
+  VpcId:
+    Type: String
+    Description: ID de la VPC
+
+  PublicSubnetId:
+    Type: String
+    Description: ID de la Subnet Pública donde se desplegará la EC2
+
+  PublicSubnetAZ:
+    Type: String
+    Description: Zona de Disponibilidad (AZ) de la Subnet Pública
+
+  EC2SecurityGroupId:
+    Type: String
+    Description: ID del Security Group para EC2
+
+  EC2InstanceProfileName:
+    Type: String
+    Description: Nombre del Instance Profile IAM para EC2
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: Tipo de instancia EC2 (ej. t3.micro, t3.small, t3.medium)
+
+  KeyName:
+    Type: String
+    Default: ''
+    Description: Nombre de la Key Pair SSH en AWS (opcional si usas SSM)
+
+  EbsVolumeSize:
+    Type: Number
+    Default: 20
+    Description: Tamaño en GB del volumen EBS independiente para PostgreSQL y Redis
+
+  UbuntuAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id'
+    Description: SSM Parameter con el AMI ID de Ubuntu 24.04 LTS
+
+  RepositoryUrl:
+    Type: String
+    Default: 'NONE'
+    Description: URL del repositorio Git a clonar durante el Bootstrap (opcional)
+
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+
+Resources:
+  # Volumen EBS Independiente (gp3, cifrado, DeleteOnTermination = false)
+  PostgresEBSVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Ref PublicSubnetAZ
+      Size: !Ref EbsVolumeSize
+      VolumeType: gp3
+      Encrypted: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-ebs-postgres'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+
+  # Instancia EC2 Ubuntu 24.04 LTS
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref UbuntuAmiId
+      SubnetId: !Ref PublicSubnetId
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroupId
+      IamInstanceProfile: !Ref EC2InstanceProfileName
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-backend-api'
+
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+          echo "[BOOTSTRAP] Iniciando preparación del servidor Ubuntu 24.04 LTS..."
+
+          # 1. Actualización e instalación de herramientas base
+          apt-get update -y
+          apt-get install -y curl ca-certificates gnupg lsb-release git nginx jq unzip awscli
+
+          # 2. Instalación de Docker y Docker Compose (Plugin V2)
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+          apt-get update -y
+          apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+          systemctl enable docker
+          systemctl start docker
+          usermod -aG docker ubuntu || true
+
+          # 3. Montaje del Volumen EBS en /mnt/ebs
+          echo "[BOOTSTRAP] Configurando el volumen EBS independiente..."
+          DEVICE=""
+          for i in {1..30}; do
+            if [ -b "/dev/nvme1n1" ]; then
+              DEVICE="/dev/nvme1n1"
+              break
+            elif [ -b "/dev/xvdf" ]; then
+              DEVICE="/dev/xvdf"
+              break
+            fi
+            sleep 2
+          done
+
+          if [ -n "$DEVICE" ]; then
+            FSTYPE=$(blkid -o value -s TYPE $DEVICE || true)
+            if [ -z "$FSTYPE" ]; then
+              echo "[BOOTSTRAP] Formateando el dispositivo $DEVICE en ext4..."
+              mkfs.ext4 -F $DEVICE
+            fi
+
+            mkdir -p /mnt/ebs
+            mount $DEVICE /mnt/ebs
+
+            UUID=$(blkid -o value -s UUID $DEVICE)
+            if ! grep -q "$UUID" /etc/fstab; then
+              echo "UUID=$UUID /mnt/ebs ext4 defaults,nofail 0 2" >> /etc/fstab
+              echo "[BOOTSTRAP] Montaje persistente añadido a /etc/fstab."
+            fi
+          else
+            echo "[BOOTSTRAP ERROR] No se encontró el dispositivo de bloques EBS."
+          fi
+
+          # 4. Creación de directorios para PostgreSQL y Redis
+          echo "[BOOTSTRAP] Creando directorios /mnt/ebs/postgres y /mnt/ebs/redis..."
+          mkdir -p /mnt/ebs/postgres
+          mkdir -p /mnt/ebs/redis
+
+          chown -R 999:999 /mnt/ebs/postgres || true
+          chown -R 999:999 /mnt/ebs/redis || true
+          chmod 700 /mnt/ebs/postgres
+
+          # 5. Clonación del proyecto (si se proporciona URL)
+          mkdir -p /app
+          cd /app
+          if [ "${RepositoryUrl}" != "NONE" ]; then
+            echo "[BOOTSTRAP] Clonando el repositorio desde ${RepositoryUrl}..."
+            git clone ${RepositoryUrl} . || true
+            if [ -f "compose.prod.yml" ]; then
+              echo "[BOOTSTRAP] Ejecutando docker compose -f compose.prod.yml up -d..."
+              docker compose -f compose.prod.yml up -d || true
+            elif [ -f "compose.yml" ]; then
+              echo "[BOOTSTRAP] Ejecutando docker compose -f compose.yml up -d..."
+              docker compose -f compose.yml up -d || true
+            fi
+          fi
+
+          echo "[BOOTSTRAP COMPLETED] Servidor configurado exitosamente."
+
+  # Asociación del Volumen EBS a la Instancia EC2
+  EBSVolumeAttachment:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref EC2Instance
+      VolumeId: !Ref PostgresEBSVolume
+      Device: /dev/sdf
+
+  # Elastic IP (EIP) para la EC2
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-eip'
+
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt ElasticIP.AllocationId
+      InstanceId: !Ref EC2Instance
+
+Outputs:
+  ElasticIP:
+    Description: Dirección IP Pública Elástica de la EC2 (Backend API)
+    Value: !Ref ElasticIP
+    Export:
+      Name: !Sub '${AWS::StackName}-ElasticIP'
+
+  EC2InstanceId:
+    Description: ID de la Instancia EC2 Backend
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-EC2InstanceId'
+
+  EBSVolumeId:
+    Description: ID del Volumen EBS de 50GB
+    Value: !Ref PostgresEBSVolume
+    Export:
+      Name: !Sub '${AWS::StackName}-EBSVolumeId'

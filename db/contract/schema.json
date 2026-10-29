@@ -1,0 +1,1311 @@
+{
+  "tablas": [
+    {
+      "esquema": "public",
+      "nombre": "restaurantes",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [
+        {
+          "restriccion": "restaurantes_email_key",
+          "columna": "email"
+        }
+      ],
+      "llaves_foraneas": [],
+      "indices": [
+        {
+          "nombre": "idx_restaurantes_email",
+          "definicion": "CREATE INDEX idx_restaurantes_email ON public.restaurantes USING btree (email)"
+        }
+      ],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "nombre_negocio",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "descripcion",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "email",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "password_hash",
+          "tipo": "text",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "nombre_dueno",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "''::character varying",
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "ubicacion_lat",
+          "tipo": "double precision",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "ubicacion_lng",
+          "tipo": "double precision",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "suscripcion_activa",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "true"
+        },
+        {
+          "nombre": "rol",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": "'RESTAURANTE'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "plan",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'basico'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "estado",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'pendiente'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "suscripcion_expira_en",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "dias_licencia",
+          "tipo": "integer",
+          "nulable": true,
+          "default": "30"
+        },
+        {
+          "nombre": "ultimo_pago",
+          "tipo": "date",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "email_verificado",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "false"
+        },
+        {
+          "nombre": "slug",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "reset_token",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "reset_token_expires",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "fecha_vencimiento",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "dias_acceso_permitidos",
+          "tipo": "integer",
+          "nulable": true,
+          "default": "0"
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "configuracion_tema",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [
+        {
+          "restriccion": "configuracion_tema_restaurante_id_key",
+          "columna": "restaurante_id"
+        }
+      ],
+      "llaves_foraneas": [
+        {
+          "columna": "restaurante_id",
+          "referencia_tabla": "restaurantes",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "restaurante_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "logo_url",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "banner_url",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "color_primario",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'#E63946'::character varying",
+          "longitud_maxima": 7
+        },
+        {
+          "nombre": "color_fondo",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'#F1FAEE'::character varying",
+          "longitud_maxima": 7
+        },
+        {
+          "nombre": "fuente_familia",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'Sans-Serif'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "layout_type",
+          "tipo": "layout_style",
+          "nulable": true,
+          "default": "'TARJETAS_DETALLADAS'::layout_style"
+        },
+        {
+          "nombre": "banner_promocional_activo",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "false"
+        },
+        {
+          "nombre": "banner_promocional_texto",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "config_diseno",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "nombre": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "refresh_tokens",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "restaurante_id",
+          "referencia_tabla": "restaurantes",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [
+        {
+          "nombre": "idx_refresh_tokens_token",
+          "definicion": "CREATE INDEX idx_refresh_tokens_token ON public.refresh_tokens USING btree (token)"
+        }
+      ],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "integer",
+          "nulable": false,
+          "default": "nextval('refresh_tokens_id_seq'::regclass)"
+        },
+        {
+          "nombre": "restaurante_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "token",
+          "tipo": "text",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "expires_at",
+          "tipo": "timestamp with time zone",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "horarios_restaurante",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "restaurante_id",
+          "referencia_tabla": "restaurantes",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "restaurante_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "dia_semana",
+          "tipo": "integer",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "hora_apertura",
+          "tipo": "time without time zone",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "hora_cierre",
+          "tipo": "time without time zone",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "categorias_restaurante",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [
+        {
+          "restriccion": "categorias_restaurante_restaurante_id_nombre_key",
+          "columna": "nombre"
+        }
+      ],
+      "llaves_foraneas": [
+        {
+          "columna": "restaurante_id",
+          "referencia_tabla": "restaurantes",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [
+        {
+          "nombre": "idx_categorias_restaurante_id",
+          "definicion": "CREATE INDEX idx_categorias_restaurante_id ON public.categorias_restaurante USING btree (restaurante_id)"
+        }
+      ],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "restaurante_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 100
+        },
+        {
+          "nombre": "orden",
+          "tipo": "integer",
+          "nulable": true,
+          "default": "0"
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "platillos",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "restaurante_id",
+          "referencia_tabla": "restaurantes",
+          "referencia_columna": "id"
+        },
+        {
+          "columna": "categoria_id",
+          "referencia_tabla": "categorias_restaurante",
+          "referencia_columna": "id"
+        },
+        {
+          "columna": "tamano_porcion_id",
+          "referencia_tabla": "tamanos_porcion",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [
+        {
+          "nombre": "idx_platillos_restaurante",
+          "definicion": "CREATE INDEX idx_platillos_restaurante ON public.platillos USING btree (restaurante_id)"
+        },
+        {
+          "nombre": "idx_platillos_activo",
+          "definicion": "CREATE INDEX idx_platillos_activo ON public.platillos USING btree (activo) WHERE (activo = true)"
+        }
+      ],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "restaurante_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "descripcion",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "precio",
+          "tipo": "numeric",
+          "nulable": false,
+          "default": null,
+          "precision": 10,
+          "escala": 2
+        },
+        {
+          "nombre": "precio_original",
+          "tipo": "numeric",
+          "nulable": true,
+          "default": null,
+          "precision": 10,
+          "escala": 2
+        },
+        {
+          "nombre": "url_imagen",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "categoria_id",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "tamano_porcion_id",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "activo",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "true"
+        },
+        {
+          "nombre": "ingredientes_principales",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "complementos",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "nivel_picante",
+          "tipo": "integer",
+          "nulable": true,
+          "default": "0"
+        },
+        {
+          "nombre": "porcion",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "''::character varying",
+          "longitud_maxima": 100
+        },
+        {
+          "nombre": "etiquetas_dieteticas",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "estado_ia",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'pendiente'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "ingredientes_catalogo",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [
+        {
+          "restriccion": "ingredientes_catalogo_nombre_key",
+          "columna": "nombre"
+        }
+      ],
+      "llaves_foraneas": [],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "es_alergeno_comun",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "false"
+        },
+        {
+          "nombre": "es_origen_animal",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "false"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "sabores_catalogo",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [
+        {
+          "restriccion": "sabores_catalogo_nombre_key",
+          "columna": "nombre"
+        }
+      ],
+      "llaves_foraneas": [],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 100
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "usuarios_comensales",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [
+        {
+          "restriccion": "usuarios_comensales_email_key",
+          "columna": "email"
+        }
+      ],
+      "llaves_foraneas": [],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "email",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "auth_provider",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "deleted_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "receta_platillo",
+      "clave_primaria": [
+        "platillo_id",
+        "ingrediente_id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "platillo_id",
+          "referencia_tabla": "platillos",
+          "referencia_columna": "id"
+        },
+        {
+          "columna": "ingrediente_id",
+          "referencia_tabla": "ingredientes_catalogo",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "platillo_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "ingrediente_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "tipo_ingrediente",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'PRINCIPAL'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "es_modificable",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "true"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "perfil_sabor_platillo",
+      "clave_primaria": [
+        "platillo_id",
+        "sabor_id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "platillo_id",
+          "referencia_tabla": "platillos",
+          "referencia_columna": "id"
+        },
+        {
+          "columna": "sabor_id",
+          "referencia_tabla": "sabores_catalogo",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "platillo_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "sabor_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "interacciones_feed",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "usuario_id",
+          "referencia_tabla": "usuarios_comensales",
+          "referencia_columna": "id"
+        },
+        {
+          "columna": "platillo_id",
+          "referencia_tabla": "platillos",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "usuario_id",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "platillo_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "tipo_interaccion",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "fecha_timestamp",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "historial_suscripciones",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "restaurante_id",
+          "referencia_tabla": "restaurantes",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "restaurante_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "plan_anterior",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "plan_nuevo",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "fecha_cambio",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "nombre": "razon",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "accion",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 100
+        },
+        {
+          "nombre": "admin_id",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "detalles",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "tamanos_porcion",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 100
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "cocinas_catalogo",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "nombre",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 100
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "platillo_cocina",
+      "clave_primaria": [
+        "platillo_id",
+        "cocina_id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "platillo_id",
+          "referencia_tabla": "platillos",
+          "referencia_columna": "id"
+        },
+        {
+          "columna": "cocina_id",
+          "referencia_tabla": "cocinas_catalogo",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "platillo_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "cocina_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "soporte_conversaciones",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "restaurante_id",
+          "referencia_tabla": "restaurantes",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "restaurante_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "asunto",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'Asunto General'::character varying",
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "comentario_calificacion",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "admin_id",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "calificacion",
+          "tipo": "integer",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "fecha_creacion",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "nombre": "fecha_cierre",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "ultima_actividad",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "nombre": "mensajes_restaurante_count",
+          "tipo": "integer",
+          "nulable": true,
+          "default": "0"
+        },
+        {
+          "nombre": "leido_admin",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "false"
+        },
+        {
+          "nombre": "leido_restaurante",
+          "tipo": "boolean",
+          "nulable": true,
+          "default": "true"
+        },
+        {
+          "nombre": "estado",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": "'abierta'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "nombre": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "soporte_mensajes",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "conversacion_id",
+          "referencia_tabla": "soporte_conversaciones",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "conversacion_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "remitente_tipo",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "remitente_id",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "mensaje",
+          "tipo": "text",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "soporte_auditoria",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "conversacion_id",
+          "referencia_tabla": "soporte_conversaciones",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "conversacion_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "accion",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "usuario_id",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "usuario_tipo",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "detalles",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "audit_logs",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "usuario_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "accion",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 100
+        },
+        {
+          "nombre": "detalles",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "ip_address",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 45
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    }
+  ],
+  "enums": {
+    "layout_style": [
+      "LISTA_SIMPLE",
+      "CUADRICULA_FOTOS",
+      "TARJETAS_DETALLADAS"
+    ]
+  },
+  "extensiones": {
+    "vector": "0.7.0"
+  },
+  "vistas": []
+}

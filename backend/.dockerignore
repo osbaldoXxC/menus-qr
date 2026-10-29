@@ -1,0 +1,19 @@
+# Dependencies & Build
+node_modules
+npm-debug.log
+dist
+build
+
+# Version Control & Environments
+.git
+.gitignore
+.env
+.env.*
+
+# Tests & Debug
+test-*.js
+test.js
+*.test.js
+*.spec.js
+logs
+debug-*.png

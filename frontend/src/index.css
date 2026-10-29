@@ -1,0 +1,207 @@
+/* ── Google Fonts ───────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base styles ────────────────────────────────────────────────── */
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply font-sans antialiased selection:bg-apple-blue/20 selection:text-apple-blue transition-colors duration-500;
+    font-feature-settings: 'ss01' 1, 'cv01' 1, 'cv11' 1;
+    background-color: var(--app-bg);
+    color: var(--app-text);
+    overflow-x: clip;
+  }
+
+  /* Noise Overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.02;
+    z-index: 9999;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  :root {
+    --app-bg: #FFFFFF;
+    --app-bg-secondary: #F5F5F7;
+    --app-bg-tertiary: #E8E8ED;
+    --app-text: #1D1D1F;
+    --app-text-secondary: #6E6E73;
+    --app-border: rgba(0,0,0,0.08);
+    --app-card: rgba(255,255,255,0.72);
+    --app-card-border: rgba(0,0,0,0.06);
+    --app-primary: #0071E3;
+    --app-primary-hover: #0077ED;
+  }
+
+  .dark {
+    --app-bg: #000000;
+    --app-bg-secondary: #161617;
+    --app-bg-tertiary: #2D2D2F;
+    --app-text: #F5F5F7;
+    --app-text-secondary: #A1A1A6;
+    --app-border: rgba(255,255,255,0.08);
+    --app-card: rgba(22,22,23,0.72);
+    --app-card-border: rgba(255,255,255,0.08);
+    --app-primary: #2997FF;
+    --app-primary-hover: #40A9FF;
+  }
+
+  /* Focus styles tipo Apple */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible {
+    @apply outline-none ring-2 ring-[#2997FF] ring-offset-2 ring-offset-black;
+  }
+
+  /* Input styling mejorado */
+  input, textarea, select {
+    @apply transition-all duration-200;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    @apply ring-2 ring-[#2997FF] ring-offset-2 ring-offset-black;
+  }
+
+  ::selection {
+    background-color: rgba(41, 151, 255, 0.25);
+    color: #F5F5F7;
+  }
+
+  :focus-visible {
+    outline: 2px solid #2997FF;
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+  }
+}
+
+/* ── Component utilities ────────────────────────────────────────── */
+@layer components {
+  /* Apple-style glass card */
+  .glass {
+    background: rgba(29, 29, 31, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-light {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* Apple-style button base */
+  .btn-apple {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.75rem;
+    border-radius: 9999px;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    letter-spacing: -0.01em;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+  }
+
+  .btn-apple-primary {
+    background-color: #2997FF;
+    color: #FFFFFF;
+  }
+
+  .btn-apple-primary:hover {
+    background-color: #40A9FF;
+    transform: scale(1.02);
+    box-shadow: 0 0 28px rgba(41, 151, 255, 0.25);
+  }
+
+  .btn-apple-outline {
+    background: transparent;
+    color: #2997FF;
+    border: 1px solid rgba(41, 151, 255, 0.3);
+  }
+
+  .btn-apple-outline:hover {
+    background: rgba(41, 151, 255, 0.06);
+    border-color: #2997FF;
+  }
+
+  /* Apple-style section spacing */
+  .section-apple {
+    padding: 6rem 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .section-apple {
+      padding: 8rem 2rem;
+    }
+  }
+
+  /* Apple-style gradient text */
+  .text-gradient-apple {
+    background: linear-gradient(135deg, #2997FF 0%, #40A9FF 50%, #7ED0FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Subtle background mesh */
+  .bg-mesh {
+    background-image:
+      radial-gradient(ellipse 80% 80% at 50% -20%, rgba(41, 151, 255, 0.08), transparent),
+      radial-gradient(ellipse 60% 60% at 80% 80%, rgba(255, 107, 53, 0.04), transparent);
+  }
+}
+
+/* ── Animation utilities ────────────────────────────────────────── */
+@layer utilities {
+  .animate-fade-up {
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .delay-100 { animation-delay: 0.1s; }
+  .delay-200 { animation-delay: 0.2s; }
+  .delay-300 { animation-delay: 0.3s; }
+  .delay-400 { animation-delay: 0.4s; }
+  .delay-500 { animation-delay: 0.5s; }
+
+  @keyframes fadeUp {
+    0% { opacity: 0; transform: translateY(24px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes scaleIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+}

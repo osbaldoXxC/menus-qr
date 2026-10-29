@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Stack 2 - Storage: Buckets S3 para Assets, Admin Frontend y Restaurant Frontend'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: mexxicanmx
+    Description: Nombre del entorno
+
+  BucketPrefix:
+    Type: String
+    Default: mexxicanmx
+    Description: Prefijo para los nombres de los buckets de S3 (debe ser único a nivel global en S3)
+
+Resources:
+  AssetsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${BucketPrefix}-assets-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, HEAD, PUT, POST, DELETE]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-assets-bucket'
+        - Key: Content
+          Value: Logos Platillos Banners Fotos Avatares
+
+  AdminBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${BucketPrefix}-admin-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-admin-bucket'
+
+  RestaurantBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${BucketPrefix}-restaurant-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-restaurant-bucket'
+
+Outputs:
+  AssetsBucketName:
+    Description: Nombre del Bucket S3 de Assets
+    Value: !Ref AssetsBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-AssetsBucketName'
+
+  AssetsBucketArn:
+    Description: ARN del Bucket S3 de Assets
+    Value: !GetAtt AssetsBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AssetsBucketArn'
+
+  AssetsBucketDomainName:
+    Description: Regional Domain Name del Bucket S3 de Assets
+    Value: !GetAtt AssetsBucket.RegionalDomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-AssetsBucketDomainName'
+
+  AdminBucketName:
+    Description: Nombre del Bucket S3 de Admin Frontend
+    Value: !Ref AdminBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminBucketName'
+
+  AdminBucketArn:
+    Description: ARN del Bucket S3 de Admin Frontend
+    Value: !GetAtt AdminBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminBucketArn'
+
+  AdminBucketDomainName:
+    Description: Regional Domain Name del Bucket S3 de Admin Frontend
+    Value: !GetAtt AdminBucket.RegionalDomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-AdminBucketDomainName'
+
+  RestaurantBucketName:
+    Description: Nombre del Bucket S3 de Restaurant Frontend
+    Value: !Ref RestaurantBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-RestaurantBucketName'
+
+  RestaurantBucketArn:
+    Description: ARN del Bucket S3 de Restaurant Frontend
+    Value: !GetAtt RestaurantBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RestaurantBucketArn'
+
+  RestaurantBucketDomainName:
+    Description: Regional Domain Name del Bucket S3 de Restaurant Frontend
+    Value: !GetAtt RestaurantBucket.RegionalDomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-RestaurantBucketDomainName'

@@ -1,0 +1,284 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Stack 3 - CloudFront: Distribuciones independientes para Assets, Admin Frontend y Restaurant Frontend (Sin dominios ni certificados ACM)'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: mexxicanmx
+
+  AssetsBucketName:
+    Type: String
+    Description: Nombre del Bucket S3 de Assets
+
+  AssetsBucketArn:
+    Type: String
+    Description: ARN del Bucket S3 de Assets
+
+  AssetsBucketDomainName:
+    Type: String
+    Description: Domain Name regional del Bucket S3 de Assets
+
+  AdminBucketName:
+    Type: String
+    Description: Nombre del Bucket S3 de Admin
+
+  AdminBucketArn:
+    Type: String
+    Description: ARN del Bucket S3 de Admin
+
+  AdminBucketDomainName:
+    Type: String
+    Description: Domain Name regional del Bucket S3 de Admin
+
+  RestaurantBucketName:
+    Type: String
+    Description: Nombre del Bucket S3 de Restaurante
+
+  RestaurantBucketArn:
+    Type: String
+    Description: ARN del Bucket S3 de Restaurante
+
+  RestaurantBucketDomainName:
+    Type: String
+    Description: Domain Name regional del Bucket S3 de Restaurante
+
+  AcmCertificateArn:
+    Type: String
+    Default: ''
+    Description: ARN del certificado SSL en AWS Certificate Manager (ACM us-east-1) para dominios personalizados (Opcional)
+
+  AdminDomainName:
+    Type: String
+    Default: ''
+    Description: Dominio CNAME personalizado para Admin (ej. admin.oamdevsol.site)
+
+  RestaurantDomainName:
+    Type: String
+    Default: ''
+    Description: Dominio CNAME personalizado para Restaurante (ej. restaurantes.oamdevsol.site)
+
+  ImagesDomainName:
+    Type: String
+    Default: ''
+    Description: Dominio CNAME personalizado para Images/Assets (ej. images.oamdevsol.site)
+
+Conditions:
+  HasAcmCert: !Not [!Equals [!Ref AcmCertificateArn, '']]
+  HasAdminDomain: !Not [!Equals [!Ref AdminDomainName, '']]
+  HasRestaurantDomain: !Not [!Equals [!Ref RestaurantDomainName, '']]
+  HasImagesDomain: !Not [!Equals [!Ref ImagesDomainName, '']]
+  UseAdminCert: !And [!Condition HasAcmCert, !Condition HasAdminDomain]
+  UseRestaurantCert: !And [!Condition HasAcmCert, !Condition HasRestaurantDomain]
+  UseImagesCert: !And [!Condition HasAcmCert, !Condition HasImagesDomain]
+
+Resources:
+  # Origin Access Control (OAC) para seguridad en S3
+  AssetsOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${EnvironmentName}-assets-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  AdminOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${EnvironmentName}-admin-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  RestaurantOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${EnvironmentName}-restaurant-oac'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # 1. CloudFront Assets
+  AssetsDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub '${EnvironmentName} - Distribución de Assets'
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Aliases: !If [UseImagesCert, [!Ref ImagesDomainName], !Ref 'AWS::NoValue']
+        ViewerCertificate: !If
+          - UseImagesCert
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: AssetsS3Origin
+            DomainName: !Ref AssetsBucketDomainName
+            OriginAccessControlId: !GetAtt AssetsOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: AssetsS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+
+  # 2. CloudFront Admin
+  AdminDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub '${EnvironmentName} - Frontend Administración'
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Aliases: !If [UseAdminCert, [!Ref AdminDomainName], !Ref 'AWS::NoValue']
+        ViewerCertificate: !If
+          - UseAdminCert
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: AdminS3Origin
+            DomainName: !Ref AdminBucketDomainName
+            OriginAccessControlId: !GetAtt AdminOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: AdminS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        # SPA Routing for React/Vite/Admin app
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 300
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 300
+
+  # 3. CloudFront Restaurante
+  RestaurantDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub '${EnvironmentName} - Frontend Restaurante'
+        DefaultRootObject: index.html
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        Aliases: !If [UseRestaurantCert, [!Ref RestaurantDomainName], !Ref 'AWS::NoValue']
+        ViewerCertificate: !If
+          - UseRestaurantCert
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: RestaurantS3Origin
+            DomainName: !Ref RestaurantBucketDomainName
+            OriginAccessControlId: !GetAtt RestaurantOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: RestaurantS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        # SPA Routing for React/Vite/Restaurant app
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 300
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 300
+
+  # S3 Bucket Policies para permitir a CloudFront OAC leer los objetos de S3
+  AssetsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AssetsBucketName
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${AssetsBucketArn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${AssetsDistribution}'
+
+  AdminBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AdminBucketName
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${AdminBucketArn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${AdminDistribution}'
+
+  RestaurantBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref RestaurantBucketName
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub '${RestaurantBucketArn}/*'
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub 'arn:aws:cloudfront::${AWS::AccountId}:distribution/${RestaurantDistribution}'
+
+Outputs:
+  AssetsDistributionDomainName:
+    Description: Dominio asignado por CloudFront para Assets
+    Value: !GetAtt AssetsDistribution.DomainName
+
+  AdminDistributionDomainName:
+    Description: Dominio asignado por CloudFront para Admin Frontend
+    Value: !GetAtt AdminDistribution.DomainName
+
+  RestaurantDistributionDomainName:
+    Description: Dominio asignado por CloudFront para Restaurante Frontend
+    Value: !GetAtt RestaurantDistribution.DomainName
