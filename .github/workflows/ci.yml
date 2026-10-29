@@ -1,0 +1,64 @@
+name: CI Menús QR
+
+on:
+  push:
+    branches: [ develop, main, 'feature/**', 'fix/**' ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  backend-test:
+    name: Backend - Pruebas Unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias limpias (backend)
+        working-directory: backend
+        run: npm ci
+
+      - name: Ejecutar pruebas unitarias
+        working-directory: backend
+        env:
+          NODE_ENV: test
+        run: npm test
+
+  frontends-build:
+    name: Frontends - Verificación y Compilación
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [ admin, frontend-comensales, frontend-restaurantes ]
+    steps:
+      - name: Descargar código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Instalar dependencias (${{ matrix.app }})
+        working-directory: ${{ matrix.app }}
+        run: npm ci
+
+      - name: Compilar con Vite y TypeScript (${{ matrix.app }})
+        working-directory: ${{ matrix.app }}
+        run: npm run build
+
+      - name: Conservar artefactos compilados (dist)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.app }}
+          path: ${{ matrix.app }}/dist
+          retention-days: 1
