@@ -1,0 +1,206 @@
+<mxfile host="Electron" agent="Antigravity" type="device">
+  <diagram id="casos-uso-mexxicanmx" name="Diagrama Global Casos de Uso MexxicanMX">
+    <mxGraphModel dx="1600" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- TITULO PRINCIPAL -->
+        <mxCell id="title" value="&lt;font style=&quot;font-size: 20px; font-family: Helvetica;&quot;&gt;&lt;b&gt;Diagrama Global de Casos de Uso - Sistema MexxicanMX&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="380" y="30" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- CONTENEDOR DEL SISTEMA (BOUNDARY MEXXICANMX) -->
+        <mxCell id="system_boundary" value="&lt;b&gt;&lt;font style=&quot;font-size: 15px;&quot;&gt;MexxicanMX&lt;/font&gt;&lt;/b&gt;" style="shape=rect;rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#D0D0D0;strokeWidth=1.5;verticalAlign=top;align=left;spacingLeft=25;spacingTop=15;fontColor=#2D3436;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="270" y="90" width="780" height="1320" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== ACTORES ==================== -->
+
+        <!-- ACTOR: Cliente / Usuario (Izquierda Superior) -->
+        <mxCell id="actor_cliente" value="&lt;b&gt;Cliente / Usuario&lt;/b&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=none;strokeColor=#2D3436;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="90" y="190" width="60" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ACTOR: Restaurante (Izquierda Medio) -->
+        <mxCell id="actor_restaurante" value="&lt;b&gt;Restaurante&lt;/b&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=none;strokeColor=#2D3436;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="90" y="580" width="60" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ACTOR: Administrador (Izquierda Inferior) -->
+        <mxCell id="actor_admin" value="&lt;b&gt;Administrador&lt;/b&gt;" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=none;strokeColor=#2D3436;strokeWidth=1.5;fontSize=13;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="90" y="960" width="60" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== CASOS DE USO: CLIENTE / USUARIO (VERDE CLARO) ==================== -->
+        <!-- Estilo base cliente: fillColor=#E6F4EA; strokeColor=#34A853; fontColor=#0D652D -->
+
+        <mxCell id="uc_consultar_qr" value="Consultar menú por QR" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E6F4EA;strokeColor=#43A047;strokeWidth=1.2;fontColor=#1B5E20;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="50" width="300" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_obtener_recom" value="Obtener recomendaciones" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E6F4EA;strokeColor=#43A047;strokeWidth=1.2;fontColor=#1B5E20;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="150" width="300" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_indicar_gustos" value="Indicar gustos" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E6F4EA;strokeColor=#43A047;strokeWidth=1.2;fontColor=#1B5E20;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="250" width="300" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== CASOS DE USO: RESTAURANTE (NARANJA / TERRACOTA) ==================== -->
+        <!-- Estilo base restaurante: fillColor=#FCE8E6; strokeColor=#D93025; fontColor=#A50E0E o tono durazno/salmón original #FBE9E7, #C62828 -->
+
+        <mxCell id="uc_registrarse" value="Registrarse" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.2;fontColor=#BF360C;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="360" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_iniciar_sesion" value="Iniciar sesión" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.2;fontColor=#BF360C;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="440" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_gestionar_restaurante" value="Gestionar restaurante" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.2;fontColor=#BF360C;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="520" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_gestionar_menu" value="Gestionar menú" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.2;fontColor=#BF360C;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="600" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_gestionar_platillos" value="Gestionar platillos" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.2;fontColor=#BF360C;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="700" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_personalizar_qr" value="Personalizar menú/QR" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.2;fontColor=#BF360C;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="780" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_consultar_estadisticas" value="Consultar estadísticas" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.2;fontColor=#BF360C;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="860" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== CASOS DE USO: ADMINISTRADOR (LILA / AZUL SUAVE) ==================== -->
+        <!-- Estilo base admin: fillColor=#EDE7F6; strokeColor=#5E35B1; fontColor=#311B92 -->
+
+        <mxCell id="uc_administrar_usuarios" value="Administrar usuarios" style="ellipse;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=1.2;fontColor=#4527A0;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="950" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_administrar_restaurantes" value="Administrar restaurantes" style="ellipse;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=1.2;fontColor=#4527A0;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="1030" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_supervisar_plataforma" value="Supervisar plataforma" style="ellipse;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=1.2;fontColor=#4527A0;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="1110" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_gestionar_soporte" value="Gestionar soporte" style="ellipse;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=1.2;fontColor=#4527A0;fontSize=13;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="system_boundary">
+          <mxGeometry x="240" y="1210" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Ajustamos altura de boundary a través de coordenadas relativas de mxGeometry -->
+
+        <!-- ==================== RELACIONES CON ACTOR: CLIENTE ==================== -->
+        <mxCell id="edge_cli_qr" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_cliente" target="uc_consultar_qr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_cli_recom" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_cliente" target="uc_obtener_recom">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_cli_gustos" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_cliente" target="uc_indicar_gustos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RELACIONES ENTRE CASOS DE USO DE CLIENTE («extend» e «include») -->
+        <!-- Obtener recomendaciones extend -> Consultar menú por QR (flecha hacia Consultar menú por QR) -->
+        <mxCell id="rel_extend_recom_qr" value="«extend»" style="edgeStyle=none;html=1;dashed=1;strokeColor=#757575;strokeWidth=1.2;fontColor=#424242;fontSize=11;align=center;endArrow=open;endSize=8;" edge="1" parent="system_boundary" source="uc_obtener_recom" target="uc_consultar_qr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Obtener recomendaciones include -> Indicar gustos (flecha hacia Indicar gustos) -->
+        <mxCell id="rel_include_recom_gustos" value="«include»" style="edgeStyle=none;html=1;dashed=1;strokeColor=#757575;strokeWidth=1.2;fontColor=#424242;fontSize=11;align=center;endArrow=open;endSize=8;" edge="1" parent="system_boundary" source="uc_obtener_recom" target="uc_indicar_gustos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== RELACIONES CON ACTOR: RESTAURANTE ==================== -->
+        <mxCell id="edge_res_reg" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_restaurante" target="uc_registrarse">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_res_login" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_restaurante" target="uc_iniciar_sesion">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_res_gest_res" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_restaurante" target="uc_gestionar_restaurante">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_res_menu" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_restaurante" target="uc_gestionar_menu">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_res_plat" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_restaurante" target="uc_gestionar_platillos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_res_qr" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_restaurante" target="uc_personalizar_qr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_res_stats" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_restaurante" target="uc_consultar_estadisticas">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RELACIONES ENTRE CASOS DE USO DE RESTAURANTE -->
+        <!-- Gestionar menú include -> Gestionar platillos -->
+        <mxCell id="rel_include_menu_plat" value="«include»" style="edgeStyle=none;html=1;dashed=1;strokeColor=#757575;strokeWidth=1.2;fontColor=#424242;fontSize=11;align=center;endArrow=open;endSize=8;" edge="1" parent="system_boundary" source="uc_gestionar_menu" target="uc_gestionar_platillos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== RELACIONES CON ACTOR: ADMINISTRADOR ==================== -->
+        <mxCell id="edge_adm_usr" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_admin" target="uc_administrar_usuarios">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_adm_res" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_admin" target="uc_administrar_restaurantes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_adm_plat" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_admin" target="uc_supervisar_plataforma">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_adm_sop" style="edgeStyle=none;html=1;strokeColor=#B0B0B0;strokeWidth=1.2;endArrow=none;" edge="1" parent="1" source="actor_admin" target="uc_gestionar_soporte">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RELACIONES ENTRE CASOS DE USO DE ADMINISTRADOR -->
+        <!-- Gestionar soporte extend -> Supervisar plataforma -->
+        <mxCell id="rel_extend_sop_plat" value="«extend»" style="edgeStyle=none;html=1;dashed=1;strokeColor=#757575;strokeWidth=1.2;fontColor=#424242;fontSize=11;align=center;endArrow=open;endSize=8;" edge="1" parent="system_boundary" source="uc_gestionar_soporte" target="uc_supervisar_plataforma">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== ENLACES / INTERACCIONES GLOBALES ENTRE ROLES ==================== -->
+        <!-- Enlace Global 1: El cliente consulta el menú/platillos creados por el restaurante -->
+        <mxCell id="global_menu_qr" value="«accede / consume»" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;dashPattern=3 3;strokeColor=#2E7D32;strokeWidth=1.2;fontColor=#1B5E20;fontSize=10;align=center;endArrow=open;endSize=6;" edge="1" parent="system_boundary" source="uc_consultar_qr" target="uc_personalizar_qr">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="640" y="82" />
+              <mxPoint x="640" y="810" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Enlace Global 2: El Administrador gestiona los restaurantes registrados -->
+        <mxCell id="global_admin_rest" value="«supervisa / audita»" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;dashPattern=3 3;strokeColor=#512DA8;strokeWidth=1.2;fontColor=#311B92;fontSize=10;align=center;endArrow=open;endSize=6;" edge="1" parent="system_boundary" source="uc_administrar_restaurantes" target="uc_gestionar_restaurante">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="1060" />
+              <mxPoint x="140" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Enlace Global 3: El Administrador gestiona usuarios (clientes) -->
+        <mxCell id="global_admin_users" value="«gestiona cuentas»" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;dashPattern=3 3;strokeColor=#512DA8;strokeWidth=1.2;fontColor=#311B92;fontSize=10;align=center;endArrow=open;endSize=6;" edge="1" parent="system_boundary" source="uc_administrar_usuarios" target="uc_iniciar_sesion">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="100" y="980" />
+              <mxPoint x="100" y="470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

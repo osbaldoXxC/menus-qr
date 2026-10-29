@@ -1,0 +1,38 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Build & Dist
+dist
+build
+
+# Version Control & IDE
+.git
+.gitignore
+.DS_Store
+.idea
+.vscode
+.openclaude
+
+# Environments
+.env
+.env.*
+
+# Testing & E2E Suites
+e2e-tests
+playwright-tests
+test-results
+playwright-report
+playwright-report.md
+coverage
+*.test.*
+*.spec.*
+test-*
+test.*
+
+# Debugging & Temporary Reports
+debug-*.png
+debug-*.jpg
+audit-reports
+auditoria-*.md
+logs

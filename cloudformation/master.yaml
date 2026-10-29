@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Master Stack - Orquestación de Infraestructura AWS MexxicanMX (Networking, Storage, CloudFront, IAM y Compute)'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: oamdevsol
+    Description: Nombre del entorno de despliegue
+
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: Bloque CIDR para la VPC
+
+  PublicSubnetCidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: Bloque CIDR para la Subnet Pública
+
+  SSHLocation:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: IP o rango CIDR para acceso SSH (puerto 22)
+
+  BucketPrefix:
+    Type: String
+    Default: oamdevsol
+    Description: Prefijo único global para los buckets S3
+
+  AdminDomainName:
+    Type: String
+    Default: admin.oamdevsol.site
+    Description: Dominio personalizado para Panel Admin
+
+  RestaurantDomainName:
+    Type: String
+    Default: mexxicanmx.oamdevsol.site
+    Description: Dominio personalizado para Panel Restaurantes
+
+  ImagesDomainName:
+    Type: String
+    Default: images.oamdevsol.site
+    Description: Dominio personalizado para Imágenes Platillos/Platos
+
+  AcmCertificateArn:
+    Type: String
+    Default: ''
+    Description: ARN del certificado SSL Wildcard (*.oamdevsol.site) en ACM us-east-1 (Opcional)
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: Tipo de instancia EC2 para el Backend API
+
+  KeyName:
+    Type: String
+    Default: ''
+    Description: Key Pair de SSH en AWS (Opcional)
+
+  EbsVolumeSize:
+    Type: Number
+    Default: 20
+    Description: Tamaño en GB para el volumen EBS de PostgreSQL/Redis (20 GB gp3)
+
+  RepositoryUrl:
+    Type: String
+    Default: 'NONE'
+    Description: URL del repositorio Git a clonar automáticamente en EC2
+
+Resources:
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./01-network.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        VpcCidr: !Ref VpcCidr
+        PublicSubnetCidr: !Ref PublicSubnetCidr
+        SSHLocation: !Ref SSHLocation
+
+  StorageStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./02-storage.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        BucketPrefix: !Ref BucketPrefix
+
+  CloudFrontStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: StorageStack
+    Properties:
+      TemplateURL: ./03-cloudfront.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        AssetsBucketName: !GetAtt StorageStack.Outputs.AssetsBucketName
+        AssetsBucketArn: !GetAtt StorageStack.Outputs.AssetsBucketArn
+        AssetsBucketDomainName: !GetAtt StorageStack.Outputs.AssetsBucketDomainName
+        AdminBucketName: !GetAtt StorageStack.Outputs.AdminBucketName
+        AdminBucketArn: !GetAtt StorageStack.Outputs.AdminBucketArn
+        AdminBucketDomainName: !GetAtt StorageStack.Outputs.AdminBucketDomainName
+        RestaurantBucketName: !GetAtt StorageStack.Outputs.RestaurantBucketName
+        RestaurantBucketArn: !GetAtt StorageStack.Outputs.RestaurantBucketArn
+        RestaurantBucketDomainName: !GetAtt StorageStack.Outputs.RestaurantBucketDomainName
+        AcmCertificateArn: !Ref AcmCertificateArn
+        AdminDomainName: !Ref AdminDomainName
+        RestaurantDomainName: !Ref RestaurantDomainName
+        ImagesDomainName: !Ref ImagesDomainName
+
+  IAMStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./04-iam.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - NetworkStack
+      - IAMStack
+    Properties:
+      TemplateURL: ./05-compute.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        VpcId: !GetAtt NetworkStack.Outputs.VPCId
+        PublicSubnetId: !GetAtt NetworkStack.Outputs.PublicSubnetId
+        PublicSubnetAZ: !GetAtt NetworkStack.Outputs.PublicSubnetAZ
+        EC2SecurityGroupId: !GetAtt NetworkStack.Outputs.EC2SecurityGroupId
+        EC2InstanceProfileName: !GetAtt IAMStack.Outputs.EC2InstanceProfileName
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        EbsVolumeSize: !Ref EbsVolumeSize
+        RepositoryUrl: !Ref RepositoryUrl
+
+Outputs:
+  BackendPublicIP:
+    Description: Dirección IP Pública (Elastic IP) del servidor EC2 Backend
+    Value: !GetAtt ComputeStack.Outputs.ElasticIP
+
+  AssetsCDN:
+    Description: URL del CDN CloudFront para Assets (Imágenes, logos, etc)
+    Value: !GetAtt CloudFrontStack.Outputs.AssetsDistributionDomainName
+
+  AdminCDN:
+    Description: URL del CDN CloudFront para Admin Frontend
+    Value: !GetAtt CloudFrontStack.Outputs.AdminDistributionDomainName
+
+  RestaurantCDN:
+    Description: URL del CDN CloudFront para Restaurante Frontend
+    Value: !GetAtt CloudFrontStack.Outputs.RestaurantDistributionDomainName
+
+  EBSVolumeId:
+    Description: ID del volumen EBS persistente
+    Value: !GetAtt ComputeStack.Outputs.EBSVolumeId

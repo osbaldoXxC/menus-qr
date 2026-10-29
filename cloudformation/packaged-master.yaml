@@ -1,0 +1,208 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Master Stack - Orquestación de Infraestructura AWS MexxicanMX (Networking,
+  Storage, CloudFront, IAM y Compute)
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: oamdevsol
+    Description: Nombre del entorno de despliegue
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: Bloque CIDR para la VPC
+  PublicSubnetCidr:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: Bloque CIDR para la Subnet Pública
+  SSHLocation:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: IP o rango CIDR para acceso SSH (puerto 22)
+  BucketPrefix:
+    Type: String
+    Default: oamdevsol
+    Description: Prefijo único global para los buckets S3
+  AdminDomainName:
+    Type: String
+    Default: admin.oamdevsol.site
+    Description: Dominio personalizado para Panel Admin
+  RestaurantDomainName:
+    Type: String
+    Default: mexxicanmx.oamdevsol.site
+    Description: Dominio personalizado para Panel Restaurantes
+  ImagesDomainName:
+    Type: String
+    Default: images.oamdevsol.site
+    Description: Dominio personalizado para Imágenes Platillos/Platos
+  AcmCertificateArn:
+    Type: String
+    Default: ''
+    Description: ARN del certificado SSL Wildcard (*.oamdevsol.site) en ACM us-east-1
+      (Opcional)
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    Description: Tipo de instancia EC2 para el Backend API
+  KeyName:
+    Type: String
+    Default: ''
+    Description: Key Pair de SSH en AWS (Opcional)
+  EbsVolumeSize:
+    Type: Number
+    Default: 20
+    Description: Tamaño en GB para el volumen EBS de PostgreSQL/Redis (20 GB gp3)
+  RepositoryUrl:
+    Type: String
+    Default: NONE
+    Description: URL del repositorio Git a clonar automáticamente en EC2
+Resources:
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/oamdevsol-cfn-templates-256663926988/c20746dd2aad72353f84a6469636b0b0.template
+      Parameters:
+        EnvironmentName:
+          Ref: EnvironmentName
+        VpcCidr:
+          Ref: VpcCidr
+        PublicSubnetCidr:
+          Ref: PublicSubnetCidr
+        SSHLocation:
+          Ref: SSHLocation
+  StorageStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/oamdevsol-cfn-templates-256663926988/be8aeb9c4df2c5566ba0168c77b0a177.template
+      Parameters:
+        EnvironmentName:
+          Ref: EnvironmentName
+        BucketPrefix:
+          Ref: BucketPrefix
+  CloudFrontStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: StorageStack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/oamdevsol-cfn-templates-256663926988/6715aa3e9f4ad783539ab8b8666e1f37.template
+      Parameters:
+        EnvironmentName:
+          Ref: EnvironmentName
+        AssetsBucketName:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.AssetsBucketName
+        AssetsBucketArn:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.AssetsBucketArn
+        AssetsBucketDomainName:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.AssetsBucketDomainName
+        AdminBucketName:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.AdminBucketName
+        AdminBucketArn:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.AdminBucketArn
+        AdminBucketDomainName:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.AdminBucketDomainName
+        RestaurantBucketName:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.RestaurantBucketName
+        RestaurantBucketArn:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.RestaurantBucketArn
+        RestaurantBucketDomainName:
+          Fn::GetAtt:
+          - StorageStack
+          - Outputs.RestaurantBucketDomainName
+        AcmCertificateArn:
+          Ref: AcmCertificateArn
+        AdminDomainName:
+          Ref: AdminDomainName
+        RestaurantDomainName:
+          Ref: RestaurantDomainName
+        ImagesDomainName:
+          Ref: ImagesDomainName
+  IAMStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/oamdevsol-cfn-templates-256663926988/d7071111d35f962aa7bb799f35500cd9.template
+      Parameters:
+        EnvironmentName:
+          Ref: EnvironmentName
+  ComputeStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - NetworkStack
+    - IAMStack
+    Properties:
+      TemplateURL: https://s3.us-east-1.amazonaws.com/oamdevsol-cfn-templates-256663926988/20fe7c62f520d43abd0a6f6ee53ff5ef.template
+      Parameters:
+        EnvironmentName:
+          Ref: EnvironmentName
+        VpcId:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.VPCId
+        PublicSubnetId:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.PublicSubnetId
+        PublicSubnetAZ:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.PublicSubnetAZ
+        EC2SecurityGroupId:
+          Fn::GetAtt:
+          - NetworkStack
+          - Outputs.EC2SecurityGroupId
+        EC2InstanceProfileName:
+          Fn::GetAtt:
+          - IAMStack
+          - Outputs.EC2InstanceProfileName
+        InstanceType:
+          Ref: InstanceType
+        KeyName:
+          Ref: KeyName
+        EbsVolumeSize:
+          Ref: EbsVolumeSize
+        RepositoryUrl:
+          Ref: RepositoryUrl
+Outputs:
+  BackendPublicIP:
+    Description: Dirección IP Pública (Elastic IP) del servidor EC2 Backend
+    Value:
+      Fn::GetAtt:
+      - ComputeStack
+      - Outputs.ElasticIP
+  AssetsCDN:
+    Description: URL del CDN CloudFront para Assets (Imágenes, logos, etc)
+    Value:
+      Fn::GetAtt:
+      - CloudFrontStack
+      - Outputs.AssetsDistributionDomainName
+  AdminCDN:
+    Description: URL del CDN CloudFront para Admin Frontend
+    Value:
+      Fn::GetAtt:
+      - CloudFrontStack
+      - Outputs.AdminDistributionDomainName
+  RestaurantCDN:
+    Description: URL del CDN CloudFront para Restaurante Frontend
+    Value:
+      Fn::GetAtt:
+      - CloudFrontStack
+      - Outputs.RestaurantDistributionDomainName
+  EBSVolumeId:
+    Description: ID del volumen EBS persistente
+    Value:
+      Fn::GetAtt:
+      - ComputeStack
+      - Outputs.EBSVolumeId

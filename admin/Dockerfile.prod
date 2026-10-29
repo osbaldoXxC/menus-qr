@@ -1,0 +1,32 @@
+# Etapa 1: Construcción (Build Stage)
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+# Copiar archivos de configuración de dependencias
+COPY package.json package-lock.json* ./
+
+# Instalar dependencias necesarias para construir el proyecto
+RUN npm ci --quiet && \
+    npm install --os=linux --libc=musl --cpu=x64 @rolldown/binding-linux-x64-musl --quiet
+
+# Copiar el código del proyecto
+COPY . .
+
+# Generar la build de producción (crea la carpeta dist)
+RUN npm run build
+
+# Etapa 2: Servidor de Producción (Production Stage)
+FROM nginx:alpine
+
+# Copiar la configuración personalizada de nginx para soporte de SPA
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copiar solo la carpeta 'dist' generada en la etapa anterior
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Exponer el puerto por defecto de nginx
+EXPOSE 80
+
+# Iniciar nginx
+CMD ["nginx", "-g", "daemon off;"]
