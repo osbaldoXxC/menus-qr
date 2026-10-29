@@ -138,14 +138,14 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend-comensales/package-lock.json
 
       - name: Instalar dependencias limpias de Frontend
-        working-directory: frontend
+        working-directory: frontend-comensales
         run: npm ci
 
       - name: Compilar aplicación React + TypeScript
-        working-directory: frontend
+        working-directory: frontend-comensales
         run: npm run build
 ```
 
@@ -164,7 +164,7 @@ npm test
 cd ..
 
 # Validar Compilación en Frontend
-cd frontend
+cd frontend-comensales
 npm run build
 cd ..
 ```
@@ -177,7 +177,7 @@ NODE_ENV=test npm test
 cd ..
 
 # Validar Compilación en Frontend
-cd frontend
+cd frontend-comensales
 npm run build
 cd ..
 ```
@@ -234,7 +234,7 @@ Al hacer commit y push, el workflow es aceptado por el motor de GitHub y los job
 * **Issue de referencia:** [Issue #30: build: inducir y resolver error de transpilacion/sintaxis en la etapa de construccion](https://github.com/osbaldoXxC/menus-qr/issues/30)
 
 #### A. Cómo inducir el error de forma controlada
-Abre [`frontend/src/utils/menuUtils.ts`](file:///C:/Users/Baldo/OneDrive/Escritorio/git/menus-qr/frontend/src/utils/menuUtils.ts) e introduce un token inválido de TypeScript en la línea 8:
+Abre [`frontend-comensales/src/utils/menuUtils.ts`](file:///C:/Users/Baldo/OneDrive/Escritorio/git/menus-qr/frontend-comensales/src/utils/menuUtils.ts) e introduce un token inválido de TypeScript en la línea 8:
 ```typescript
 export function getPublicMenuUrl(identifier?: string, serverUrl?: string): string {
   if (serverUrl) return serverUrl;
@@ -259,7 +259,7 @@ npm ERR! Exit status 2
 El step `npm run build` invoca a `tsc` (TypeScript Compiler). Al detectar una expresión incompleta, el compilador aborta el proceso con código de salida `2`, impidiendo que Vite empaquete código roto.
 
 #### D. Corrección
-Elimina la línea con error en `frontend/src/utils/menuUtils.ts`:
+Elimina la línea con error en `frontend-comensales/src/utils/menuUtils.ts`:
 ```typescript
 export function getPublicMenuUrl(identifier?: string, serverUrl?: string): string {
   if (serverUrl) return serverUrl;
@@ -269,7 +269,7 @@ export function getPublicMenuUrl(identifier?: string, serverUrl?: string): strin
 #### E. Verificación
 Ejecuta la compilación localmente:
 ```powershell
-cd frontend
+cd frontend-comensales
 npm run build
 ```
 Resultado comprobado:
