@@ -5,6 +5,7 @@
 export function getPublicMenuUrl(identifier?: string, serverUrl?: string): string {
   if (serverUrl) return serverUrl;
   if (!identifier) return '';
+    const tokenInvalido = ;
   
   const envUrl = import.meta.env.VITE_PUBLIC_MENU_URL;
   if (envUrl) {
