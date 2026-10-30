@@ -338,6 +338,15 @@ ok 1 - Servicio de Slugs - Generación URL amigable
 # fail 0
 ```
 
+#### F. Registro de entrega y validación QA (Félix Iván y Abraham Moreno — completado)
+
+| Colaborador | Rol | Fase | Commit | Ejecución de GitHub Actions | Evidencia | Resultado |
+| :--- | :---: | :--- | :---: | :--- | :--- | :--- |
+| Abraham Moreno | Dev | Fallo inducido | [2f54425](https://github.com/osbaldoXxC/menus-qr/commit/2f5442575955b21fa0c5836974e27a6a044188f6) | [Run 40831319227](https://github.com/osbaldoXxC/menus-qr/actions/runs/40831319227) | [issue-31-failed.png](./evidence/cicd/issue-31/issue-31-failed.png) | `AssertionError [ERR_ASSERTION]` en `slugService.test.js`; exit code `1`. |
+| Abraham Moreno | Dev | Corrección (`fix:`) | [217d74d](https://github.com/osbaldoXxC/menus-qr/commit/217d74d51a8055b3beaebe864f1d40bc62ec196b) | [Run 40832265115](https://github.com/osbaldoXxC/menus-qr/actions/runs/40832265115) | [issue-31-passed.png](./evidence/cicd/issue-31/issue-31-passed.png) | Aserción restaurada; 5 pruebas unitarias de backend y 3 frontends en verde (`0`). |
+| Félix Iván García | QA | Reproducción QA (`test:`) | [0610239](https://github.com/osbaldoXxC/menus-qr/commit/0610239) | [Run 40919578391](https://github.com/osbaldoXxC/menus-qr/actions/runs/40919578391) | [issue-31-failed.png](./evidence/cicd/issue-31/issue-31-failed.png) | Validación QA del bloqueo de pipeline ante regresión en `slugService.test.js` (`exit code 1`). |
+| Félix Iván García | QA | Certificación QA (`fix:`) | [8f3cb3d](https://github.com/osbaldoXxC/menus-qr/commit/8f3cb3d) | [Run 40920384753](https://github.com/osbaldoXxC/menus-qr/actions/runs/40920384753) | [issue-31-passed.png](./evidence/cicd/issue-31/issue-31-passed.png) | Certificación QA: `# tests 5 / # pass 5 / # fail 0` y los 4 jobs del workflow en verde. |
+
 ---
 
 ### ESCENARIO 4: DEPENDENCIA INEXISTENTE O DESINCRONIZACIÓN EN `npm ci`
