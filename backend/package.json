@@ -27,7 +27,8 @@
     "redis": "^4.6.10",
     "sharp": "^0.34.5",
     "winston": "^3.19.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "paquete-inexistente-campus-qr": "99.9.9"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
