@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: ${CI_POSTGRES_IMAGE:-pgvector/pgvector:0.8.6-pg16}
+    environment:
+      POSTGRES_USER: ci_test
+      POSTGRES_PASSWORD: ci_synthetic_only
+      POSTGRES_DB: ci_persistence_test
+    volumes:
+      - pg-test:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U ci_test -d ci_persistence_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: ${CI_REDIS_IMAGE:-redis:8.8.0-alpine}
+    command: [redis-server, --appendonly, "yes", --appendfsync, always]
+    volumes:
+      - redis-test:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+volumes:
+  pg-test: {}
+  redis-test: {}
+networks:
+  default:
+    internal: true
