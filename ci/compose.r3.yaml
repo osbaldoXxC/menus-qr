@@ -5,7 +5,10 @@ services:
       - ../backend/src/db/migrations/20261115_r3_taxonomy_draft.sql:/docker-entrypoint-initdb.d/04-taxonomy.sql:ro
 
   ml-proxy:
-    image: ${CI_BACKEND_IMAGE:-mexxicanmx-ci-backend}
+    image: ${CI_ML_PROXY_IMAGE:-mexxicanmx-ci-ml-proxy}
+    pull_policy: build
+    build:
+      context: ../backend
     command: [node, /app/tests/integration/r3-isolated/ml-proxy.cjs]
     volumes:
       - ../backend/tests:/app/tests:ro

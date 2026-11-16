@@ -83,7 +83,7 @@ services:
       retries: 30
 
   backend-fallback:
-    image: ${CI_BACKEND_IMAGE:-mexxicanmx-ci-backend}
+    image: ${CI_BACKEND_FALLBACK_IMAGE:-mexxicanmx-ci-backend-fallback}
     build:
       context: ../backend
     environment:
