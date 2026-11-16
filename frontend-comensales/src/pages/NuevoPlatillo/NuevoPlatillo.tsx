@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { CatalogEvidencePanel } from '../../components/CatalogEvidencePanel';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { motion } from 'framer-motion';
@@ -9,6 +10,9 @@ export function NuevoPlatillo() {
   const { id } = useParams(); // ID para edición
   const isEdit = !!id;
 
+  const [dirty, setDirty] = useState(false);
+  const [recipeExtras, setRecipeExtras] = useState<Record<string, any[]>>({});
+  const extraSections = ['ingredientes_secundarios', 'salsas', 'aderezos', 'condimentos', 'ingredientes_compuestos', 'sustituciones_permitidas', 'modificadores_opcionales'];
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState('');
@@ -43,6 +47,7 @@ export function NuevoPlatillo() {
           const platillo = platillos.find((p: any) => p.id === id);
           
           if (platillo) {
+            setRecipeExtras(Object.fromEntries(extraSections.filter(key => Array.isArray(platillo[key])).map(key => [key, platillo[key]])));
             setFormData({
               nombre: platillo.nombre || '',
               descripcion: platillo.descripcion || '',
@@ -72,6 +77,14 @@ export function NuevoPlatillo() {
     };
     init();
   }, [id, isEdit]);
+
+  const savedSignature = useRef<string | null>(null);
+  useEffect(() => {
+    if (fetching) return;
+    const signature = JSON.stringify([formData, recipeExtras, imagenFile?.name]);
+    if (savedSignature.current === null) savedSignature.current = signature;
+    setDirty(signature !== savedSignature.current);
+  }, [fetching, formData, recipeExtras, imagenFile]);
 
   // ── Drag & drop zone ──────────────────────────────────────────
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -125,6 +138,7 @@ export function NuevoPlatillo() {
 
     try {
       const submitData = new FormData();
+      for (const key of extraSections) if (Object.hasOwn(recipeExtras, key)) submitData.append(key, JSON.stringify(recipeExtras[key]));
       submitData.append('nombre', formData.nombre);
       submitData.append('descripcion', formData.descripcion);
       submitData.append('precio', formData.precio);
@@ -179,7 +193,7 @@ export function NuevoPlatillo() {
           </p>
         </motion.div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onChange={() => setDirty(true)} onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <motion.div
               className="p-4 rounded-apple-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[14px] text-center font-medium"
@@ -471,6 +485,19 @@ export function NuevoPlatillo() {
             </button>
           </div>
 
+          <section className="space-y-4" aria-label="Composición completa de la receta">
+            <h2 className="text-xl font-bold">Composición de la receta</h2>
+            <p>Guardar ingredientes o precios no los confirma. Los cambios relevantes hacen que la evidencia anterior deje de aplicar; revisa nuevamente después de guardar.</p>
+            {extraSections.map(key => {
+              const entries = recipeExtras[key] || [];
+              const detailed = entries.some(value => typeof value !== 'string');
+              return <label key={key} className="block">{key.replace(/_/g, ' ')} (un ingrediente por línea)
+                {!Object.hasOwn(recipeExtras, key) && isEdit && <p>Sección no disponible; no se sobrescribirá salvo que la edites.</p>}
+                {detailed ? <p className="p-3 border rounded-lg">Composición detallada conservada: {entries.map(v => typeof v === 'string' ? v : v.name || v.nombre || 'ingrediente sin identificar').join(', ')}. Este editor conserva el desglose existente.</p> :
+                  <textarea value={entries.join('\n')} onChange={e => setRecipeExtras({ ...recipeExtras, [key]: e.target.value.split('\n').filter(v => v.trim()) })} className="block w-full p-3 border rounded-lg bg-transparent focus-visible:ring-2" />}
+              </label>;
+            })}
+          </section>
           {/* Botones */}
           <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-apple-border dark:border-apple-dark-border">
             <button
@@ -490,6 +517,7 @@ export function NuevoPlatillo() {
             </motion.button>
           </div>
         </form>
+        {id && <CatalogEvidencePanel dishId={id} dirty={dirty} />}
       </div>
     </div>
   );

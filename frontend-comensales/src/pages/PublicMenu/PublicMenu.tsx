@@ -1,3 +1,4 @@
+import { RecommendationWizard } from '../../components/RecommendationWizard/RecommendationWizard';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -186,6 +187,7 @@ function hexToRgbStr(hex: string, opacity: number): string {
 export function PublicMenu() {
   const { restaurant_id } = useParams<{ restaurant_id: string }>();
   const [loading, setLoading] = useState(true);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [menuData, setMenuData] = useState<{ restaurante: RestaurantInfo; categorias: Categoria[] } | null>(null);
   const [selectedPlatillo, setSelectedPlatillo] = useState<Platillo | null>(null);
 
@@ -478,7 +480,10 @@ export function PublicMenu() {
 
       {/* ── HERO BANNER SUPERIOR (Si layout.estilo_encabezado === 'banner_hero') ── */}
       {isHeroBanner && (
-        <div className="relative w-full overflow-hidden mb-6">
+        <div
+          data-testid="public-menu-header"
+          className="relative w-full overflow-hidden mb-6"
+        >
           {/* Cabecera superior con el color de marca elegido arriba */}
           <div 
             className="h-44 sm:h-56 md:h-64 w-full relative overflow-hidden flex items-center justify-center shadow-lg"
@@ -588,6 +593,12 @@ export function PublicMenu() {
         </div>
         </div>
       </nav>
+      {restaurant_id && <div className="relative z-10 mx-auto max-w-[900px] px-5 pt-5">
+        <button type="button" onClick={() => setSearchOpen(true)} className="rounded-full bg-[#A33400] px-6 py-3 font-bold text-white hover:bg-[#812900] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+          Buscar platillos en este restaurante
+        </button>
+        <RecommendationWizard restaurantId={restaurant_id} isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      </div>}
 
       {/* ── CONTENIDO ── */}
       <main className="max-w-[900px] mx-auto px-5 pt-10 space-y-16">

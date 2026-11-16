@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { startupDdlDisabled } = require('../config/environment');
 
 // Map of active SSE connections. Key: user ID, Value: Array of response objects
 const sseClients = new Map();
@@ -21,7 +22,7 @@ const initDb = async () => {
     console.error('Error initializing support audit table:', e);
   }
 };
-initDb();
+if (!startupDdlDisabled()) initDb();
 
 const streamConversations = (req, res) => {
   const userId = req.user.id;

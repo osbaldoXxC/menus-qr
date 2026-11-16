@@ -1,12 +1,11 @@
-FROM node:20-alpine
+FROM node:22.23.5-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
 
 # Optimizar instalación usando npm ci y Estándar de Node 18 para reuso de capas base
-RUN npm ci --quiet && \
-    npm install --os=linux --libc=musl --cpu=x64 @rolldown/binding-linux-x64-musl --quiet
+RUN npm ci --quiet
 
 COPY . .
 

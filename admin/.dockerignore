@@ -6,6 +6,13 @@ build
 .gitignore
 .env
 .env.*
+**/.env
+**/.env.*
+**/.npmrc
+**/.aws
+**/.ssh
+**/*.pem
+**/*.key
 .DS_Store
 coverage
 .idea

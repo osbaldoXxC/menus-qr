@@ -37,7 +37,7 @@ export function Header() {
   const consumerItems = [
     { nombre: 'Inicio', ruta: '/' },
     { nombre: 'Descubrir', ruta: '/descubrir' },
-    { nombre: 'Cuestionario IA', ruta: '/cuestionario' },
+    { nombre: 'Buscar platillos', ruta: '/cuestionario' },
     { nombre: 'Para Restaurantes', ruta: '/para-restaurantes' },
   ];
 

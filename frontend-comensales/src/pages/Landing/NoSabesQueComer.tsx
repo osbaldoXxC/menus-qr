@@ -54,10 +54,7 @@ export function NoSabesQueComer() {
               Descubrir Platillos
             </Link>
             <Link to="/cuestionario" className="px-4 py-2 text-[13px] font-medium text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] rounded-lg transition-colors duration-200">
-              Cuestionario IA
-            </Link>
-            <Link to="/escanear" className="px-4 py-2 text-[13px] font-medium text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] rounded-lg transition-colors duration-200">
-              Escanear Menú QR
+              Buscar platillos
             </Link>
           </nav>
 
@@ -292,12 +289,6 @@ export function NoSabesQueComer() {
             >
               🌮 Descubrir con IA
             </button>
-            <button
-              onClick={() => navigate('/escanear')}
-              className="px-10 py-4 bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.10] font-semibold rounded-full hover:bg-black/[0.07] dark:hover:bg-white/[0.10] transition-all duration-200 text-center"
-            >
-              📷 Escanear Menú QR
-            </button>
           </div>
         </motion.div>
       </section>
@@ -312,8 +303,7 @@ export function NoSabesQueComer() {
           </div>
           <div className="flex items-center gap-6">
             <Link to="/descubrir" className="text-[12px] text-[#86868B] hover:text-[#1D1D1F] dark:text-[#A1A1A6] dark:hover:text-white transition-colors">Descubrir Platillos</Link>
-            <Link to="/cuestionario" className="text-[12px] text-[#86868B] hover:text-[#1D1D1F] dark:text-[#A1A1A6] dark:hover:text-white transition-colors">Cuestionario IA</Link>
-            <Link to="/escanear" className="text-[12px] text-[#86868B] hover:text-[#1D1D1F] dark:text-[#A1A1A6] dark:hover:text-white transition-colors">Escanear Menú</Link>
+            <Link to="/cuestionario" className="text-[12px] text-[#86868B] hover:text-[#1D1D1F] dark:text-[#A1A1A6] dark:hover:text-white transition-colors">Buscar platillos</Link>
           </div>
           <p className="text-[12px] text-[#AEAEB2] dark:text-[#6E6E73] font-medium">Hecho con 🌶️ en México · Antojos & Gastronomía</p>
         </div>

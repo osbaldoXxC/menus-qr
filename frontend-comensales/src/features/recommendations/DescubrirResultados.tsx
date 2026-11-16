@@ -7,97 +7,34 @@ import { CuestionarioState } from './CuestionarioWizard';
 import { ThemeContext } from '../../context/ThemeContext';
 import { Logo } from '../../pages/components/Logo';
 import { BouncyLoadingScreen } from './BouncyLoadingScreen';
+import { formatMenuPrice } from './formatMenuPrice';
 
 interface DescubrirResultadosProps {
   onRefine?: () => void;
+  response?: RecommendationResponse;
+  embedded?: boolean;
 }
 
-const FALLBACK_RECOMMENDATIONS: RecommendationItem[] = [
-  {
-    dish: {
-      id: 'f1',
-      nombre: 'Dumplings al Vapor (Jiaozi)',
-      descripcion: 'Tu antojo de sabores auténticos coincide al 99% con esta receta tradicional preparada al vapor con cebollín fresco y salsa de soya.',
-      precio: 125,
-      url_imagen: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=800&q=80',
-      nivel_picante: 1,
-      porcion: '6 piezas',
-      categoria_nombre: 'Oriental',
-      etiquetas_dieteticas: [],
-      ingredientes_principales: ['Cerdo molido', 'Cebollín chino', 'Jengibre fresco', 'Salsa de soya', 'Masa artesanal']
-    },
-    restaurant: {
-      id: '22222222-2222-2222-2222-222222222222',
-      name: 'Gran Dragón Dorado',
-      slug: 'gran-dragon-dorado',
-      menuUrl: '/menu/22222222-2222-2222-2222-222222222222'
-    },
-    matchScore: 0.99,
-    matchPercentage: 99,
-    reasons: ['🍜 Coincide con tu antojo de comida Oriental'],
-    tags: ['Cerdo molido', 'Cebollín chino', 'Jengibre fresco']
-  },
-  {
-    dish: {
-      id: 'f2',
-      nombre: 'Filete Mignon al Oporto',
-      descripcion: 'Ideal para una ocasión especial. La reducción al Oporto y el puré trufado ofrecen una experiencia inigualable.',
-      precio: 480,
-      url_imagen: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80',
-      nivel_picante: 0,
-      porcion: '300g',
-      categoria_nombre: 'Gourmet',
-      etiquetas_dieteticas: ['sin_gluten'],
-      ingredientes_principales: ['Corte Filete Mignon', 'Vino Oporto', 'Mantequilla trufada']
-    },
-    restaurant: {
-      id: '55555555-5555-5555-5555-555555555555',
-      name: "L'Étoile Gourmet",
-      slug: 'letoile-gourmet',
-      menuUrl: '/menu/55555555-5555-5555-5555-555555555555'
-    },
-    matchScore: 0.97,
-    matchPercentage: 97,
-    reasons: ['🥩 Coincide con tu gusto por cortes premium'],
-    tags: ['sin_gluten', 'gourmet']
-  },
-  {
-    dish: {
-      id: 'f3',
-      nombre: 'Pato Pekín Laminado',
-      descripcion: 'Un clásico de la cocina tradicional. Su piel laqueada ultra crujiente te fascinará al primer bocado.',
-      precio: 450,
-      url_imagen: 'https://images.unsplash.com/photo-1514944288352-fffac99f0bdf?auto=format&fit=crop&w=800&q=80',
-      nivel_picante: 1,
-      porcion: 'Para compartir',
-      categoria_nombre: 'Oriental',
-      etiquetas_dieteticas: [],
-      ingredientes_principales: ['Pato entero', 'Crepas chinas', 'Salsa Hoisin']
-    },
-    restaurant: {
-      id: '22222222-2222-2222-2222-222222222222',
-      name: 'Gran Dragón Dorado',
-      slug: 'gran-dragon-dorado',
-      menuUrl: '/menu/22222222-2222-2222-2222-222222222222'
-    },
-    matchScore: 0.95,
-    matchPercentage: 95,
-    reasons: ['🦆 Receta icónica del chef'],
-    tags: ['imperial']
-  }
-];
-
-export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefine }) => {
+export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefine, response, embedded = false }) => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useContext(ThemeContext);
   const isDark = theme === 'dark';
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [showBouncyScreen, setShowBouncyScreen] = useState<boolean>(true);
-  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [safetyMessage, setSafetyMessage] = useState(response?.safety.disclaimer || '');
+  const [loading, setLoading] = useState<boolean>(!response);
+  const [showBouncyScreen, setShowBouncyScreen] = useState<boolean>(!response);
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>(() => {
+    const seen = new Set<string>();
+    return (response?.recommendations || []).filter(item => {
+      const key = `${item.restaurant.id}:${item.dish.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+  });
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [isRestaurantDrawerOpen, setIsRestaurantDrawerOpen] = useState<boolean>(false);
-  const [sessionRestaurants, setSessionRestaurants] = useState<any[]>([]);
+  const [sessionRestaurants, setSessionRestaurants] = useState<any[]>(() => Array.from(new Map((response?.recommendations || []).map(item => [item.restaurant.id, { ...item.restaurant, topDish: item.dish.nombre }])).values()));
 
   // Framer Motion Swipe Values for Tinder Effect
   const dragX = useMotionValue(0);
@@ -107,12 +44,16 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
 
   const fetchRecommendations = async () => {
     setLoading(true);
+    setErrorMessage('');
+    setRecommendations([]);
+    setSessionRestaurants([]);
 
-    let cravingText = 'Algo delicioso';
+    let cravingText = '';
     let cravingTags: string[] = [];
     let diet = 'none';
     let allergies: string[] = [];
-    let socialContext = 'solo';
+    let budgetMax: number | undefined;
+    let excludedIngredients: string[] = [];
 
     const savedState = localStorage.getItem('mexxicanmx_cuestionario_state');
     if (savedState) {
@@ -122,7 +63,8 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
         cravingTags = parsed.cravingTags || cravingTags;
         diet = parsed.diet || diet;
         allergies = parsed.allergies || allergies;
-        socialContext = parsed.socialContext || socialContext;
+        budgetMax = parsed.budgetMax;
+        excludedIngredients = parsed.excludedIngredients || [];
       } catch (e) {
         console.warn('Error parseando cuestionario state:', e);
       }
@@ -133,10 +75,11 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
         craving: { text: cravingText, tags: cravingTags },
         diet,
         allergies,
-        socialContext,
-        limit: 8
+        budgetMax,
+        excludedIngredients
       });
 
+      setSafetyMessage(res.safety.disclaimer);
       if (res && res.recommendations && res.recommendations.length > 0) {
         setRecommendations(res.recommendations);
         setSelectedIndex(0);
@@ -147,19 +90,19 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
             uniqueRestMap.set(item.restaurant.id, {
               ...item.restaurant,
               topDish: item.dish.nombre,
-              topScore: item.matchPercentage
+              topScore: null
             });
           }
         });
 
         setSessionRestaurants(Array.from(uniqueRestMap.values()));
       } else {
-        setRecommendations(FALLBACK_RECOMMENDATIONS);
+        setRecommendations([]);
         setSelectedIndex(0);
       }
     } catch (err) {
-      console.warn('Error en recomendador, usando catálogo de respaldo:', err);
-      setRecommendations(FALLBACK_RECOMMENDATIONS);
+      setErrorMessage('No se pudieron obtener recomendaciones. Revisa tus datos e intenta de nuevo.');
+      setRecommendations([]);
       setSelectedIndex(0);
     } finally {
       setLoading(false);
@@ -167,10 +110,10 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
   };
 
   useEffect(() => {
-    fetchRecommendations();
+    if (!response) fetchRecommendations();
   }, []);
 
-  const currentItem = recommendations[selectedIndex] || FALLBACK_RECOMMENDATIONS[0];
+  const currentItem = recommendations[selectedIndex];
   const remainingDishesCount = Math.max(0, recommendations.length - (selectedIndex + 1));
 
   // Pasar al siguiente platillo (Acción del botón 👎 o Swipe Left o Flecha Izq)
@@ -192,6 +135,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
   // Soporte de navegación por Teclado Accesible (WCAG 2.1)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof Element && e.target.closest('button, a, input, textarea, select')) return;
       if (isRestaurantDrawerOpen) {
         if (e.key === 'Escape') setIsRestaurantDrawerOpen(false);
         return;
@@ -222,11 +166,20 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
   };
 
   const upcomingDishes = recommendations.filter((_, idx) => idx !== selectedIndex);
+  if (loading) return <main className="p-8" aria-busy="true" role="status">Buscando recomendaciones…</main>;
+  if (!currentItem) return <main className="max-w-2xl mx-auto p-6 space-y-4">
+    <h1 className="text-2xl font-bold">{errorMessage ? 'No pudimos completar la búsqueda' : 'Sin resultados verificables'}</h1>
+    <p role={errorMessage ? 'alert' : 'status'}>{errorMessage || 'No encontramos platillos cuya compatibilidad podamos verificar para esta solicitud.'}</p>
+    <p>{safetyMessage}</p>
+    <button type="button" className="p-3 border rounded-lg focus-visible:ring-2" onClick={() => fetchRecommendations()}>Reintentar</button>
+    <button type="button" className="p-3 border rounded-lg focus-visible:ring-2" onClick={onRefine || (() => navigate('/cuestionario'))}>Cambiar solicitud</button>
+  </main>;
+
 
   return (
     <div
       data-testid="recommendation-card"
-      className="min-h-screen bg-white dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] font-sans flex flex-col justify-between relative overflow-hidden transition-colors duration-500"
+      className={`${embedded ? '' : 'min-h-screen'} bg-white dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] font-sans flex flex-col justify-between relative overflow-hidden transition-colors duration-500`}
     >
       {/* ── PANTALLA DE CARGA BOUNCY CON FÍSICA NATURAL Y TRANSICIÓN INMEDIATA ── */}
       <AnimatePresence>
@@ -271,11 +224,11 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
               type="button"
               data-testid="refine-search"
               onClick={onRefine || (() => navigate('/cuestionario'))}
-              aria-label="Refinar preferencias en el cuestionario IA"
+              aria-label="Refinar antojo"
               className="py-1.5 px-3.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.08] dark:border-white/[0.10] text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.07] dark:hover:bg-white/[0.10] transition flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#FF4A00] outline-none"
             >
               <Sparkles className="w-3.5 h-3.5 text-[#FF4A00]" />
-              <span className="hidden sm:inline">Refinar antojo</span>
+              <span>Refinar antojo</span>
             </button>
             <button
               onClick={toggleTheme}
@@ -296,7 +249,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
         <div className="lg:col-span-4 space-y-6">
           <div>
             <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-transparent bg-clip-text bg-gradient-to-r from-[#FF2A54] to-[#FF8C00]">
-              RECOMENDADO POR IA
+              PLATILLO SUGERIDO
             </span>
 
             <h1 className="text-[34px] sm:text-[40px] font-black leading-[1.08] tracking-tight mt-2">
@@ -305,6 +258,10 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
 
             <p className="text-[15px] font-normal text-[#86868B] dark:text-[#A1A1A6] leading-relaxed mt-3">
               {currentItem.dish.descripcion}
+              <span className="block mt-3 text-sm">{currentItem.safety.disclaimer}</span>
+              <span className="block text-sm">{currentItem.reasons.join(" · ")}</span>
+              {response?.safety.hasUnverifiableRestrictions && <span className="block text-sm">Parte de la información necesaria no pudo verificarse con los datos disponibles.</span>}
+              {safetyMessage && <span className="block mt-2 text-sm">{safetyMessage}</span>}
             </p>
           </div>
 
@@ -312,7 +269,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
           <div className="space-y-3.5 pt-1">
             <div className="flex items-center gap-3 text-[14px] font-medium text-[#4B5563] dark:text-[#D1D5DB]">
               <span className="w-7 h-7 rounded-full bg-[#FF4A00]/10 text-[#FF4A00] flex items-center justify-center text-xs">📍</span>
-              <span>Restaurante verificado en MexxicanMX</span>
+              <span>Información declarada del menú</span>
             </div>
 
             <div
@@ -325,7 +282,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
 
             <div className="flex items-center gap-3 text-[22px] font-black text-[#FF4A00]">
               <span className="w-7 h-7 rounded-full bg-[#FF8C00]/10 text-[#FF8C00] flex items-center justify-center text-xs">💰</span>
-              <span>${currentItem.dish.precio} <span className="text-xs font-bold text-[#86868B]">MXN</span></span>
+              <span>{formatMenuPrice(currentItem.dish.precio)}</span>
             </div>
           </div>
 
@@ -334,7 +291,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
             <div className="flex flex-wrap gap-2">
               {(currentItem.dish.ingredientes_principales && currentItem.dish.ingredientes_principales.length > 0
                 ? currentItem.dish.ingredientes_principales
-                : ['Receta del chef', 'Ingredientes frescos', 'Especialidad']
+                : []
               ).map((ing, i) => (
                 <span
                   key={i}
@@ -376,30 +333,33 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
 
               {/* Imagen de la Tarjeta */}
               <div className="relative h-64 sm:h-72 w-full overflow-hidden bg-gradient-to-br from-[#FF2A54]/10 via-[#FF4A00]/10 to-[#FF8C00]/10 dark:from-white/[0.03] dark:to-white/[0.06]">
-                <img
-                  src={currentItem.dish.url_imagen || 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=800&q=80'}
+                {currentItem.dish.url_imagen && <img
+                  src={currentItem.dish.url_imagen}
                   alt={currentItem.dish.nombre}
                   className="w-full h-full object-cover pointer-events-none"
-                />
+                />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
 
                 {/* Badges superiores */}
                 <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
                   <span className="px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md text-[#1D1D1F] text-[12px] font-bold shadow-sm">
-                    {currentItem.dish.categoria_nombre || 'Especialidad'}
+                    {currentItem.dish.categoria_nombre || 'Categoría no declarada'}
                   </span>
                   <span
-                    data-testid="recommendation-score"
+                    data-testid="match-percentage"
                     className="px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[12px] font-bold flex items-center gap-1.5 border border-white/20"
                   >
                     <span className="w-2 h-2 rounded-full bg-[#FF4A00]" />
-                    <span>{currentItem.matchPercentage}% match</span>
+                    <span>Orden sugerido</span>
                   </span>
                 </div>
 
                 {/* Nombre en la base de la imagen */}
                 <div className="absolute bottom-4 left-4 right-4 text-white z-10 pointer-events-none">
-                  <h2 className="text-[22px] font-extrabold leading-tight drop-shadow-sm">
+                  <h2
+                    data-testid="dish-name"
+                    className="text-[22px] font-extrabold leading-tight drop-shadow-sm"
+                  >
                     {currentItem.dish.nombre}
                   </h2>
                   <p className="text-[12px] font-bold text-gray-200 mt-1 flex items-center gap-1">
@@ -417,14 +377,14 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
 
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex flex-wrap gap-1.5">
-                    {(currentItem.dish.ingredientes_principales || ['Especialidad']).slice(0, 2).map((tag, idx) => (
+                    {(currentItem.dish.ingredientes_principales || []).slice(0, 2).map((tag, idx) => (
                       <span key={idx} className="px-3 py-1 rounded-full bg-black/[0.03] dark:bg-white/[0.06] text-[12px] font-semibold text-[#4B5563] dark:text-[#D1D5DB]">
                         {tag}
                       </span>
                     ))}
                   </div>
                   <div className="text-[20px] font-black text-[#FF4A00]">
-                    ${currentItem.dish.precio}
+                    {formatMenuPrice(currentItem.dish.precio)}
                   </div>
                 </div>
 
@@ -433,7 +393,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
                   type="button"
                   data-testid="recommendation-heart"
                   onClick={handleOpenCurrentRestaurantMenu}
-                  disabled={loading}
+                  disabled={loading || !currentItem.restaurant.menuUrl}
                   aria-label={`Ver menú completo de ${currentItem?.dish?.nombre || 'platillo'}`}
                   className="w-full py-4 px-6 rounded-full bg-gradient-to-r from-[#FF2A54] via-[#FF4A00] to-[#FF8C00] hover:opacity-95 text-white font-bold text-[14px] transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_12px_24px_rgba(255,74,0,0.25)] hover:shadow-[0_16px_32px_rgba(255,74,0,0.35)] cursor-pointer focus-visible:ring-2 focus-visible:ring-[#FF4A00] outline-none disabled:opacity-50"
                 >
@@ -475,8 +435,8 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
               <button
                 type="button"
                 onClick={handleOpenCurrentRestaurantMenu}
-                disabled={loading}
-                aria-label="Me gusta: Abrir menú del restaurante (Flecha derecha o Enter)"
+                disabled={loading || !currentItem.restaurant.menuUrl}
+                aria-label="Abrir menú del restaurante (Flecha derecha o Enter)"
                 className="w-14 h-14 rounded-full bg-gradient-to-r from-[#FF2A54] to-[#FF4A00] border border-[#FF4A00] shadow-lg shadow-rose-500/25 hover:scale-105 active:scale-95 transition flex items-center justify-center text-xl cursor-pointer text-white focus-visible:ring-2 focus-visible:ring-[#FF4A00] outline-none disabled:opacity-40"
               >
                 <span>❤️</span>
@@ -501,22 +461,19 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
 
             <div className="space-y-3">
               {upcomingDishes.slice(0, 3).map(item => {
-                const actualIndex = recommendations.findIndex(r => r.dish.id === item.dish.id);
+                const actualIndex = recommendations.findIndex(r => r.dish.id === item.dish.id && r.restaurant.id === item.restaurant.id);
                 return (
-                  <div
-                    key={item.dish.id}
+                  <button type="button"
+                    key={`${item.restaurant.id}:${item.dish.id}`}
                     onClick={() => setSelectedIndex(actualIndex)}
-                    role="button"
-                    tabIndex={0}
                     aria-label={`Ver recomendación de ${item.dish.nombre}`}
-                    onKeyDown={(e) => { if (e.key === 'Enter') setSelectedIndex(actualIndex); }}
-                    className="bg-white dark:bg-[#161617] p-3.5 rounded-[18px] border border-black/[0.06] dark:border-white/[0.08] shadow-sm hover:border-[#FF4A00]/40 transition cursor-pointer flex items-center gap-3.5 group focus-visible:ring-2 focus-visible:ring-[#FF4A00] outline-none"
+                    className="w-full text-left bg-white dark:bg-[#161617] p-3.5 rounded-[18px] border border-black/[0.06] dark:border-white/[0.08] shadow-sm hover:border-[#FF4A00]/40 transition cursor-pointer flex items-center gap-3.5 group focus-visible:ring-2 focus-visible:ring-[#FF4A00] outline-none"
                   >
-                    <img
-                      src={item.dish.url_imagen || 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=800&q=80'}
+                    {item.dish.url_imagen && <img
+                      src={item.dish.url_imagen}
                       alt={item.dish.nombre}
                       className="w-11 h-11 rounded-[12px] object-cover flex-shrink-0 group-hover:scale-105 transition-transform"
-                    />
+                    />}
                     <div className="flex-1 min-w-0">
                       <h4 className="text-[13px] font-bold text-[#1D1D1F] dark:text-white truncate">
                         {item.dish.nombre}
@@ -526,9 +483,9 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
                       </p>
                     </div>
                     <span className="text-[13px] font-black text-[#FF4A00] flex-shrink-0">
-                      {item.matchPercentage}%
+                      Sugerencia
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -541,7 +498,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
               <span>¿No es lo que buscas?</span>
             </div>
             <p className="text-[12px] text-[#4B5563] dark:text-[#D1D5DB] leading-relaxed">
-              Prueba un nuevo antojo con nuestro cuestionario de sabores y texturas.
+              Edita tu antojo y vuelve a buscar.
             </p>
             <button
               type="button"
@@ -598,13 +555,13 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
                     <div>
                       <h4 className="font-extrabold text-base">{rest.name}</h4>
                       <p className="text-xs text-[#86868B] mt-0.5">
-                        Sugerido: <span className="font-bold text-[#FF4A00]">{rest.topDish}</span> ({rest.topScore}% match)
+                        Sugerido: <span className="font-bold text-[#FF4A00]">{rest.topDish}</span>
                       </p>
                     </div>
                     <button
                       type="button"
                       data-testid="open-restaurant-menu"
-                      onClick={() => handleOpenRestaurantFromDrawer(rest.menuUrl)}
+                      onClick={() => handleOpenRestaurantFromDrawer(rest.menuUrl || '')}
                       aria-label={`Ver menú de ${rest.name}`}
                       className="py-2 px-4 rounded-full bg-[#FF4A00] text-white text-xs font-bold hover:bg-[#FF5722] transition flex items-center gap-1.5 flex-shrink-0 shadow-sm focus-visible:ring-2 focus-visible:ring-[#FF4A00] outline-none"
                     >

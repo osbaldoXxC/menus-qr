@@ -1,10 +1,11 @@
-FROM python:3.11-slim
+FROM python:3.11.18-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies for spaCy
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libgcc1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

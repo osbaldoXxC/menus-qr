@@ -1,0 +1,108 @@
+services:
+  postgres:
+    image: ${CI_POSTGRES_IMAGE:-pgvector/pgvector:0.8.6-pg16}
+    environment:
+      POSTGRES_USER: ci_test
+      POSTGRES_PASSWORD: ci_synthetic_only
+      POSTGRES_DB: r3_test_isolated
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ../backend/src/db/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../backend/tests/integration/dec012-isolated/fixtures.sql:/docker-entrypoint-initdb.d/02-fixtures.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U ci_test -d r3_test_isolated"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  redis:
+    image: ${CI_REDIS_IMAGE:-redis:8.8.0-alpine}
+    command: [redis-server, --save, "", --appendonly, "no"]
+    tmpfs: [/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  ml:
+    image: ${CI_ML_IMAGE:-mexxicanmx-ci-ml}
+    build:
+      context: ../ml-service
+    volumes:
+      - ../ml-service:/app:ro
+      - ../shared:/app/shared:ro
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+  ai-engine:
+    image: ${CI_AI_IMAGE:-mexxicanmx-ci-ai}
+    build:
+      context: ../ai-engine
+      dockerfile: Dockerfile
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=4)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  backend:
+    image: ${CI_BACKEND_IMAGE:-mexxicanmx-ci-backend}
+    build:
+      context: ../backend
+    environment: &backend-env
+      NODE_ENV: test
+      DATABASE_URL: postgresql://ci_test:ci_synthetic_only@postgres:5432/r3_test_isolated
+      REDIS_URL: redis://redis:6379
+      ML_SERVICE_URL: http://ml:8000
+      JWT_SECRET: ci-synthetic-secret-not-for-deployment
+      REFRESH_TOKEN_SECRET: ci-synthetic-secret-not-for-deployment
+      FRONTEND_URL: http://127.0.0.1:43010
+      PORT: 4000
+    volumes:
+      - ../backend/src:/app/src:ro
+      - ../backend/tests:/app/tests:ro
+      - ../shared:/app/shared:ro
+    ports:
+      - "127.0.0.1:${CI_BACKEND_PORT:-43000}:4000"
+    networks: [default, ci-ingress]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      ml: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, node, -e, "require('http').get('http://127.0.0.1:4000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend-fallback:
+    image: ${CI_BACKEND_IMAGE:-mexxicanmx-ci-backend}
+    build:
+      context: ../backend
+    environment:
+      <<: *backend-env
+      ML_SERVICE_URL: http://127.0.0.1:1
+      ML_SERVICE_TIMEOUT: 1000
+    volumes:
+      - ../backend/src:/app/src:ro
+      - ../shared:/app/shared:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, node, -e, "require('http').get('http://127.0.0.1:4000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+networks:
+  default:
+    internal: true
+  ci-ingress: {}

@@ -9,6 +9,13 @@ build
 .gitignore
 .env
 .env.*
+**/.env
+**/.env.*
+**/.npmrc
+**/.aws
+**/.ssh
+**/*.pem
+**/*.key
 
 # Tests & Debug
 test-*.js

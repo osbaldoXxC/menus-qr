@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const { startupDdlDisabled } = require('./environment');
 require('dotenv').config();
 
 // En Docker, DATABASE_URL debe apuntar al nombre del servicio (postgres)
@@ -76,6 +77,40 @@ async function runMigrations() {
         ip_address VARCHAR(45),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- B1-T04-C1: catálogo y auditoría de verificación (additive)
+      CREATE TABLE IF NOT EXISTS alergenos_canonicos (
+        id VARCHAR(64) PRIMARY KEY,
+        nombre_canonico VARCHAR(120) NOT NULL UNIQUE,
+        descripcion TEXT NULL,
+        fuente VARCHAR(255) NULL,
+        nivel_verificacion VARCHAR(50) NULL,
+        activo BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS alergeno_terminos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        alergeno_id VARCHAR(64) NOT NULL REFERENCES alergenos_canonicos(id) ON DELETE CASCADE,
+        termino_normalizado VARCHAR(255) NOT NULL,
+        tipo VARCHAR(50) NOT NULL,
+        fuente VARCHAR(255) NULL,
+        nivel_verificacion VARCHAR(50) NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (alergeno_id, termino_normalizado, tipo)
+      );
+      CREATE TABLE IF NOT EXISTS platillo_verificacion_auditoria (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        platillo_id UUID NOT NULL REFERENCES platillos(id) ON DELETE CASCADE,
+        restaurante_id UUID NOT NULL,
+        accion VARCHAR(100) NOT NULL,
+        estado_anterior JSONB NULL,
+        estado_nuevo JSONB NULL,
+        actor_id UUID NULL,
+        actor_rol VARCHAR(50) NULL,
+        motivo TEXT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
     `);
 
     // 2. All Defensive Column Alterations (Idempotent)
@@ -95,6 +130,27 @@ async function runMigrations() {
       ALTER TABLE platillos ADD COLUMN IF NOT EXISTS etiquetas_dieteticas JSONB DEFAULT '[]'::jsonb;
       ALTER TABLE platillos ADD COLUMN IF NOT EXISTS tamano_porcion_id UUID;
       ALTER TABLE platillos ADD COLUMN IF NOT EXISTS precio_original DECIMAL(10, 2) DEFAULT NULL;
+      -- B1-T04-C1 recipe/catalog sections
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS ingredientes_secundarios JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS salsas JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS aderezos JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS condimentos JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS ingredientes_compuestos JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS sustituciones_permitidas JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS modificadores_opcionales JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS alergenos_declarados JSONB DEFAULT '[]'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS contacto_cruzado JSONB NULL;
+      -- B1-T04-C1 verification metadata (conservative defaults, historical not auto-verified)
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS verification_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS verification_state VARCHAR(50) NOT NULL DEFAULT 'declared_unverified';
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS completeness_state VARCHAR(50) NOT NULL DEFAULT 'incomplete';
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS cross_contamination_state VARCHAR(50) NOT NULL DEFAULT 'not_assessed';
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS verified_recipe_version VARCHAR(128) NULL;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS current_recipe_version VARCHAR(128) NULL;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS verified_by UUID NULL;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP WITH TIME ZONE NULL;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS verification_source VARCHAR(255) NULL;
+      ALTER TABLE platillos ADD COLUMN IF NOT EXISTS verification_updated_at TIMESTAMP WITH TIME ZONE NULL;
 
       ALTER TABLE usuarios_comensales ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
 
@@ -124,8 +180,8 @@ async function runMigrations() {
   }
 }
 
-// Solo ejecuta auto-migración al arrancar el servidor normal, no en entorno de tests
-if (process.env.NODE_ENV !== 'test') {
+// Tests and explicitly protected local development do not run startup DDL.
+if (process.env.NODE_ENV !== 'test' && !startupDdlDisabled()) {
   runMigrations();
 }
 

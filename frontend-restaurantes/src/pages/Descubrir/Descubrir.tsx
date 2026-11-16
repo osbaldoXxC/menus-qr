@@ -1,6 +1,5 @@
-import React from 'react';
-import { DescubrirResultados } from '../../features/recommendations/DescubrirResultados';
+import { NaturalSearch } from '../../features/recommendations/NaturalSearch';
 
 export function Descubrir() {
-  return <DescubrirResultados />;
+  return <NaturalSearch />;
 }

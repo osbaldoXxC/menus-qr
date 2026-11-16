@@ -1,0 +1,19 @@
+services:
+  postgres:
+    volumes:
+      - ../backend/src/db/migrations/20261115_r3_catalog_evidence.sql:/docker-entrypoint-initdb.d/03-r3.sql:ro
+      - ../backend/src/db/migrations/20261115_r3_taxonomy_draft.sql:/docker-entrypoint-initdb.d/04-taxonomy.sql:ro
+
+  ml-proxy:
+    image: ${CI_BACKEND_IMAGE:-mexxicanmx-ci-backend}
+    command: [node, /app/tests/integration/r3-isolated/ml-proxy.cjs]
+    volumes:
+      - ../backend/tests:/app/tests:ro
+    depends_on:
+      ml: { condition: service_healthy }
+
+  backend:
+    environment:
+      ML_SERVICE_URL: http://ml-proxy:8010
+    depends_on:
+      ml-proxy: { condition: service_started }

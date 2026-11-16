@@ -1,6 +1,5 @@
-import React from 'react';
-import { CuestionarioWizard } from '../../features/recommendations/CuestionarioWizard';
+import { NaturalSearch } from '../../features/recommendations/NaturalSearch';
 
 export function CuestionarioIA() {
-  return <CuestionarioWizard />;
+  return <NaturalSearch />;
 }

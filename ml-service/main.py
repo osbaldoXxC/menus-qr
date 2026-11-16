@@ -1,13 +1,15 @@
-import os
+﻿import os
 import re
 import math
+import time
 import unicodedata
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from linguistic import analyze as analyze_mexican_spanish
 
 app = FastAPI(
     title="MexxicanMX Advanced Semantic ML Recommendation Engine",
@@ -23,7 +25,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- CONFIGURACIÓN DE PESOS CENTRALIZADA ---
+try:
+    import spacy
+    nlp = spacy.load("es_core_news_sm")
+    SPACY_AVAILABLE = True
+except Exception:
+    SPACY_AVAILABLE = False
+    nlp = None
+
+# --- CONFIGURACIÃ“N DE PESOS CENTRALIZADA ---
 WEIGHTS = {
     "EXACT_PHRASE": 3.00,
     "NAME": 2.00,
@@ -36,90 +46,17 @@ WEIGHTS = {
     "FUZZY": 0.50
 }
 
-# --- DICCIONARIO DE CONCEPTOS Y PROTEÍNAS ---
-PROTEIN_MAP = {
-    "cerdo": ["cerdo", "puerco", "porcino", "carnitas", "pastor", "tocino", "chicharrón", "chicharron", "jamón", "jamon", "manteca"],
-    "res": ["res", "bistec", "filete", "sirloin", "rib eye", "ribeye", "tasajo", "arrachera", "cecina", "barbacoa", "suadero", "vacuno"],
-    "pollo": ["pollo", "pechuga", "muslo", "ala", "gallina", "poultry"],
-    "pescado": ["pescado", "atún", "atun", "salmón", "salmon", "trucha", "bacalao", "robalo", "huachinango", "filete de pescado"],
-    "mariscos": ["marisco", "mariscos", "camarón", "camaron", "camarones", "pulpo", "langosta", "ostión", "ostion", "jaiba", "seafood"]
-}
-
-DISH_TYPE_MAP = {
-    "taco": ["taco", "tacos", "flauta", "volcán", "volcan", "gringa"],
-    "quesadilla": ["quesadilla", "quesadillas", "empanada"],
-    "sopa": ["sopa", "caldo", "caldosito", "consomé", "consome", "crema", "ramen", "pho", "pozole", "menudo"],
-    "hamburguesa": ["hamburguesa", "hamburguesas", "burger"],
-    "pasta": ["pasta", "fideos", "espagueti", "tallarines", "lasaña", "lasagna", "risotto", "ramen"],
-    "postre": ["postre", "flan", "pastel", "helado", "churro", "tarta", "cake", "brownie"]
-}
-
-ALLERGEN_MAP = {
-    "cacahuate": ["cacahuate", "cacahuates", "maní", "mani", "peanut"],
-    "camaron": ["camarón", "camaron", "camarones", "shrimp", "gambas", "marisco", "mariscos"],
-    "lacteos": ["leche", "queso", "crema", "mantequilla", "lácteo", "lacteo", "dairy", "oaxaca", "gouda", "quesillo"],
-    "gluten": ["trigo", "gluten", "harina", "pan", "pasta", "wonton", "empanadillas", "fideos", "bizcocho", "crepas"],
-    "huevo": ["huevo", "huevos", "egg"],
-    "pescado": ["pescado", "atún", "atun", "salmón", "salmon", "trucha", "bacalao", "fish"],
-    "nueces": ["nuez", "nueces", "pistache", "pistaches", "almendra", "almendras", "nut"],
-    "mariscos": ["marisco", "mariscos", "camarón", "camaron", "camarones", "pulpo", "langosta", "ostión", "ostion", "jaiba", "seafood"]
-}
-
+# --- DICCIONARIO DE CONCEPTOS Y PROTEÃNAS ---
 NEGATION_PATTERNS = [
-    r'no\s+quiero\s+([a-záéíóúñ\s]+)',
-    r'sin\s+([a-záéíóúñ\s]+)',
-    r'evitar\s+([a-záéíóúñ\s]+)',
-    r'no\s+me\s+gusta\s+([a-záéíóúñ\s]+)',
-    r'que\s+no\s+tenga\s+([a-záéíóúñ\s]+)',
-    r'nada\s+de\s+([a-záéíóúñ\s]+)'
+    r'no\s+quiero\s+([a-zÃ¡Ã©Ã­Ã³ÃºÃ±\s]+)',
+    r'sin\s+([a-zÃ¡Ã©Ã­Ã³ÃºÃ±\s]+)',
+    r'evitar\s+([a-zÃ¡Ã©Ã­Ã³ÃºÃ±\s]+)',
+    r'no\s+me\s+gusta\s+([a-zÃ¡Ã©Ã­Ã³ÃºÃ±\s]+)',
+    r'que\s+no\s+tenga\s+([a-zÃ¡Ã©Ã­Ã³ÃºÃ±\s]+)',
+    r'nada\s+de\s+([a-zÃ¡Ã©Ã­Ã³ÃºÃ±\s]+)'
 ]
 
 STOP_WORDS = {"quiero", "unos", "unas", "algo", "de", "con", "para", "que", "un", "una", "los", "las", "el", "la", "me", "se", "por", "favor"}
-
-# --- MODELS ---
-class CravingInput(BaseModel):
-    text: Optional[str] = ""
-    tags: Optional[List[str]] = Field(default_factory=list)
-
-class RecommendationRequest(BaseModel):
-    restaurant_id: str
-    craving: Optional[CravingInput] = Field(default_factory=CravingInput)
-    diet: Optional[str] = "none"
-    allergies: Optional[List[str]] = Field(default_factory=list)
-    socialContext: Optional[str] = "solo"
-    limit: Optional[int] = 5
-    dishes: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
-    restaurant: Optional[Dict[str, Any]] = None
-
-class DishOutput(BaseModel):
-    id: str
-    nombre: str
-    descripcion: str
-    precio: float
-    url_imagen: str
-    nivel_picante: int = 0
-    porcion: str = ""
-    categoria_nombre: str = ""
-    etiquetas_dieteticas: List[str] = Field(default_factory=list)
-    ingredientes_principales: List[str] = Field(default_factory=list)
-
-class RestaurantOutput(BaseModel):
-    id: str
-    name: str
-    slug: str
-    menuUrl: str
-
-class RecommendationItem(BaseModel):
-    dish: DishOutput
-    restaurant: RestaurantOutput
-    matchScore: float
-    matchPercentage: int
-    reasons: List[str]
-    tags: List[str]
-
-class RecommendationResponse(BaseModel):
-    recommendations: List[RecommendationItem]
-    meta: Dict[str, Any]
 
 # --- HELPER FUNCTIONS ---
 
@@ -131,6 +68,15 @@ def normalize_text(text: str) -> str:
     text = "".join([c for c in nfkd_form if not unicodedata.combining(c)])
     text = re.sub(r'[^a-z0-9\s]', ' ', text)
     return ' '.join(text.split())
+
+def spacy_normalize_text(text: str) -> str:
+    if not text:
+        return ""
+    if not SPACY_AVAILABLE:
+        return normalize_text(text)
+    doc = nlp(text.lower().strip())
+    lemmas = [token.lemma_ for token in doc if not token.is_stop and token.pos_ in ["NOUN", "ADJ", "VERB"]]
+    return " ".join(lemmas)
 
 def levenshtein_distance(s1: str, s2: str) -> int:
     if len(s1) > len(s2):
@@ -159,9 +105,17 @@ def fuzzy_similarity(token1: str, token2: str) -> float:
     sim = 1.0 - (dist / float(max_len))
     return sim if sim >= 0.60 else 0.0
 
+
 def parse_negations(text: str) -> List[str]:
     negated_terms = []
     text_lower = text.lower()
+    
+    if SPACY_AVAILABLE and nlp:
+        doc = nlp(text_lower)
+        for token in doc:
+            if token.dep_ == "neg" and token.head.pos_ in ["NOUN", "VERB"]:
+                negated_terms.append(spacy_normalize_text(token.head.lemma_))
+    
     for pattern in NEGATION_PATTERNS:
         matches = re.findall(pattern, text_lower)
         for match in matches:
@@ -170,146 +124,18 @@ def parse_negations(text: str) -> List[str]:
                 negated_terms.append(normalize_text(words[0]))
                 if len(words) > 1 and words[0] in ["carne", "de"]:
                     negated_terms.append(normalize_text(f"{words[0]} {words[1]}"))
-    return list(set(negated_terms))
+    
+    for match in re.finditer(r'\bno\s+(?:lleve|traiga|como|puedo comer)\s+([a-z]+)', normalize_text(text)):
+        negated_terms.append(match.group(1))
+    # "sin gastar" qualifies a budget; "nada" is not an ingredient in
+    # "sin nada de puerco". Keep the actual food term unchanged.
+    ignored = {'gastar'}
+    if re.search(r'\bsin\s+nada\s+de\b', normalize_text(text)):
+        ignored.add('nada')
+    if re.search(r'(?<!no\s)\bsin\s+picante\b(?!\s*(?:,|y\b|ni\b|o\b))', text.lower()):
+        ignored.add('picante')
+    return list(set(term for term in negated_terms if term not in ignored))
 
-def is_allergen_present(dish: Dict[str, Any], allergy_keys: List[str]) -> bool:
-    if not allergy_keys:
-        return False
-
-    ingredients = dish.get("ingredientes_principales") or []
-    complements = dish.get("complementos") or []
-    name = dish.get("nombre", "")
-    desc = dish.get("descripcion", "")
-
-    all_text = " ".join([
-        name,
-        desc,
-        " ".join([str(i) for i in ingredients]),
-        " ".join([str(c) for c in complements])
-    ])
-    norm_text = normalize_text(all_text)
-
-    for allergy in allergy_keys:
-        allergy_norm = normalize_text(str(allergy))
-        keywords = ALLERGEN_MAP.get(allergy_norm, [allergy_norm])
-        for kw in keywords:
-            kw_norm = normalize_text(kw)
-            if kw_norm and re.search(r'\b' + re.escape(kw_norm) + r'\b', norm_text):
-                return True
-    return False
-
-def is_negated_term_present(dish: Dict[str, Any], negated_terms: List[str]) -> bool:
-    if not negated_terms:
-        return False
-
-    ingredients = dish.get("ingredientes_principales") or []
-    complements = dish.get("complementos") or []
-    name = dish.get("nombre", "")
-    desc = dish.get("descripcion", "")
-
-    all_text = f"{name} {desc} {' '.join([str(i) for i in ingredients])} {' '.join([str(c) for c in complements])}"
-    norm_text = normalize_text(all_text)
-
-    for term in negated_terms:
-        if term in ["carne", "carnes"]:
-            for protein, kws in PROTEIN_MAP.items():
-                for kw in kws:
-                    if re.search(r'\b' + re.escape(normalize_text(kw)) + r'\b', norm_text):
-                        return True
-        else:
-            synonyms = [term]
-            for category, kws in PROTEIN_MAP.items():
-                if term in kws or category == term:
-                    synonyms.extend(kws)
-            for syn in synonyms:
-                syn_norm = normalize_text(syn)
-                if syn_norm and re.search(r'\b' + re.escape(syn_norm) + r'\b', norm_text):
-                    return True
-    return False
-
-def is_diet_incompatible(dish: Dict[str, Any], diet: str) -> bool:
-    if not diet or diet == "none" or diet == "sin_restricciones":
-        return False
-
-    diet = diet.lower().replace("-", "_")
-    tags = [normalize_text(str(t)) for t in (dish.get("etiquetas_dieteticas") or [])]
-    name_desc = normalize_text(f"{dish.get('nombre', '')} {dish.get('descripcion', '')}")
-    ingredients = normalize_text(" ".join([str(i) for i in (dish.get("ingredientes_principales") or [])]))
-    full_text = f"{name_desc} {ingredients}"
-
-    if diet in ["vegetariana", "vegetarian"]:
-        if "vegetariano" in tags or "vegano" in tags:
-            return False
-        for kws in PROTEIN_MAP.values():
-            for kw in kws:
-                if normalize_text(kw) in full_text:
-                    return True
-
-    elif diet in ["vegana", "vegan"]:
-        if "vegano" in tags:
-            return False
-        animal_kws = ["huevo", "queso", "leche", "crema", "mantequilla", "miel", "oaxaca", "gouda"]
-        for kws in PROTEIN_MAP.values():
-            animal_kws.extend(kws)
-        for kw in animal_kws:
-            if normalize_text(kw) in full_text:
-                return True
-
-    elif diet in ["sin_gluten", "gluten_free"]:
-        if "sin_gluten" in tags or "singluten" in tags:
-            return False
-        gluten_kws = ["trigo", "harina", "pan", "pasta", "wonton", "empanadillas", "fideos", "bizcocho", "crepas"]
-        for kw in gluten_kws:
-            if normalize_text(kw) in full_text:
-                return True
-
-    return False
-
-def generate_reasons(dish: Dict[str, Any], craving: CravingInput, diet: str, allergies: List[str]) -> List[str]:
-    reasons = []
-    dish_name_norm = normalize_text(dish.get("nombre", ""))
-    dish_desc_norm = normalize_text(dish.get("descripcion", ""))
-    dish_cat_norm = normalize_text(dish.get("categoria_nombre", ""))
-    ingredients_norm = [normalize_text(str(i)) for i in (dish.get("ingredientes_principales") or [])]
-
-    user_text = normalize_text(craving.text or "")
-    user_tags = [normalize_text(t) for t in (craving.tags or [])]
-
-    if "taco" in user_text or "tacos" in user_tags or "taco" in user_tags:
-        if "taco" in dish_name_norm or "taco" in dish_cat_norm:
-            reasons.append("🌮 Coincide con tu antojo de Tacos")
-
-    if "pastor" in user_text or "pastor" in user_tags:
-        if "pastor" in dish_name_norm or "pastor" in dish_desc_norm or any("pastor" in i for i in ingredients_norm):
-            reasons.append("🔥 Preparación tradicional Al Pastor")
-
-    if any(p in user_text for p in ["puerco", "cerdo"]):
-        if any(p in dish_desc_norm or any(p in i for i in ingredients_norm) for p in ["cerdo", "puerco", "pastor", "carnitas"]):
-            reasons.append("🐷 Contiene carne de cerdo seleccionada")
-
-    if any(p in user_text for p in ["res", "bistec", "rib eye", "sirloin"]):
-        if any(p in dish_desc_norm or any(p in i for i in ingredients_norm) for p in ["res", "bistec", "rib eye", "sirloin"]):
-            reasons.append("🥩 Corte jugoso de carne de res")
-
-    if "caldosito" in user_text or "sopa" in user_text or "caldosito" in user_tags:
-        if any(s in dish_name_norm or s in dish_cat_norm for s in ["sopa", "caldo", "pozole", "menudo", "consome"]):
-            reasons.append("🥣 Platillo reconfortante y caldosito")
-
-    if diet and diet != "none":
-        if diet in ["vegetariana", "vegetarian"]:
-            reasons.append("🥬 100% compatible con tu dieta vegetariana")
-        elif diet in ["vegana", "vegan"]:
-            reasons.append("🌱 100% compatible con tu dieta vegana")
-        elif diet in ["sin_gluten", "gluten_free"]:
-            reasons.append("🌾 Platillo libre de gluten")
-
-    if allergies:
-        reasons.append(f"✅ 100% libre de las {len(allergies)} alergia(s) indicadas")
-
-    if not reasons:
-        reasons.append("⭐ Excelente recomendación basada en tus gustos")
-
-    return list(dict.fromkeys(reasons))[:3]
 
 # --- MAIN RECOMMENDATION ENDPOINT ---
 
@@ -317,77 +143,334 @@ def generate_reasons(dish: Dict[str, Any], craving: CravingInput, diet: str, all
 def health_check():
     return {"status": "ok", "service": "MexxicanMX Advanced Semantic ML Recommendation Engine", "version": "2.0.0"}
 
-@app.post("/recommendations", response_model=RecommendationResponse)
-def get_recommendations(req: RecommendationRequest):
-    import time
-    start_time = time.time()
-
-    dishes = req.dishes or []
-    if not dishes:
-        return RecommendationResponse(
-            recommendations=[],
-            meta={
-                "restaurant_id": req.restaurant_id,
-                "totalCandidates": 0,
-                "recommendedCount": 0,
-                "executionTimeMs": round((time.time() - start_time) * 1000, 2)
-            }
-        )
-
-    # 1. Filter active dishes
-    active_dishes = [d for d in dishes if d.get("activo", True) is not False]
-    total_candidates = len(active_dishes)
-
-    # 2. Extract negated terms (e.g., "no quiero carne", "sin puerco")
-    user_raw_text = req.craving.text if req.craving else ""
-    negated_terms = parse_negations(user_raw_text)
-
-    # 3. STRICT EXCLUSIONS: Allergies, Negated Terms & Diets
-    safe_dishes = []
-    filtered_allergies_count = 0
-    filtered_negations_count = 0
-    filtered_diet_count = 0
-
-    for d in active_dishes:
-        if is_allergen_present(d, req.allergies or []):
-            filtered_allergies_count += 1
-            continue
-
-        if is_negated_term_present(d, negated_terms):
-            filtered_negations_count += 1
-            continue
-
-        if is_diet_incompatible(d, req.diet or "none"):
-            filtered_diet_count += 1
-            continue
-
-        safe_dishes.append(d)
-
-    if not safe_dishes:
-        return RecommendationResponse(
-            recommendations=[],
-            meta={
-                "restaurant_id": req.restaurant_id,
-                "totalCandidates": total_candidates,
-                "filteredByAllergies": filtered_allergies_count,
-                "filteredByNegations": filtered_negations_count,
-                "filteredByDiet": filtered_diet_count,
-                "recommendedCount": 0,
-                "executionTimeMs": round((time.time() - start_time) * 1000, 2)
-            }
-        )
-
-    # 4. MULTI-FIELD SEMANTIC MATCHING & WEIGHTED SCORING
-    user_text_norm = normalize_text(user_raw_text)
-    user_tags_norm = [normalize_text(t) for t in (req.craving.tags if req.craving else [])]
-    user_words = [w for w in user_text_norm.split() if w not in STOP_WORDS and len(w) > 1]
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
     
-    # Direct search terms
-    query_terms = list(set(user_words + user_tags_norm))
+    if SPACY_AVAILABLE:
+        print("[INFO] spaCy modelo es_core_news_sm cargado exitosamente para NLP espaÃ±ol")
+    else:
+        print("[WARN] spaCy no estÃ¡ disponible, usando modo degradado (regex + TF-IDF)")
+    
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
 
-    # TF-IDF Vectorization
+# =========================
+# R2 ML V2 internal endpoints (additive, DEC-003/DEC-012 aligned)
+# NOTE: /recommendations kept for transition compatibility in this file; backend V2 integration must not fallback to it.
+# =========================
+
+import hashlib
+from pydantic import ConfigDict, model_validator
+
+
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class V2Craving(StrictModel):
+    text: str = ""
+    tags: List[str] = Field(default_factory=list)
+
+
+class V2Restrictions(StrictModel):
+    allergies: List[str] = Field(default_factory=list)
+    diet: Optional[str] = "none"
+    excludedIngredients: List[str] = Field(default_factory=list)
+    # budget fields preserved structurally (ML proposes only; BE authoritative per DEC-002)
+    budgetMax: Optional[float] = None
+    budgetCurrency: Optional[str] = None
+    budgetPerPerson: Optional[bool] = None
+
+
+class V2Options(StrictModel):
+    limit: int = 5
+    locale: str = "es-MX"
+    requestId: Optional[str] = None
+
+
+class InterpretRequest(StrictModel):
+    requestId: Optional[str] = None
+    craving: V2Craving = Field(default_factory=V2Craving)
+    restrictions: V2Restrictions = Field(default_factory=V2Restrictions)
+    options: V2Options = Field(default_factory=V2Options)
+
+    @model_validator(mode="after")
+    def _validate_limits(self):
+        if self.options.limit < 1 or self.options.limit > 10:
+            raise ValueError("options.limit must be between 1 and 10")
+        if len(self.craving.text or "") > 500:
+            raise ValueError("craving.text too long")
+        return self
+
+
+class InterpretBudget(StrictModel):
+    amount: Optional[float] = None
+    currency: Optional[str] = None
+    ambiguous: bool = False
+    perPerson: Optional[bool] = None
+    confidence: float = 0.0
+    notes: List[str] = Field(default_factory=list)
+
+
+class InterpretExtracted(StrictModel):
+    intent: str = "recommendation"
+    preferences: List[str] = Field(default_factory=list)
+    allergies: List[str] = Field(default_factory=list)
+    diet: Optional[str] = "none"
+    excludedIngredients: List[str] = Field(default_factory=list)
+    budget: InterpretBudget = Field(default_factory=InterpretBudget)
+    entities: List[str] = Field(default_factory=list)
+    negations: List[str] = Field(default_factory=list)
+
+
+class InterpretResponse(StrictModel):
+    requestId: str
+    extracted: InterpretExtracted
+    confidence: float = 0.0
+    ambiguous: bool = False
+    meta: Dict[str, Any] = Field(default_factory=dict)
+
+
+class RankCandidate(StrictModel):
+    id: str
+    # optional ranking-relevant fields provided by BE (authoritative source is BE/DB)
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    categoria_nombre: Optional[str] = None
+    precio: Optional[float] = None
+    ingredientes_principales: List[Any] = Field(default_factory=list)
+    complementos: List[Any] = Field(default_factory=list)
+    etiquetas_dieteticas: List[str] = Field(default_factory=list)
+    nivel_picante: Optional[int] = None
+
+
+class RankRequest(StrictModel):
+    requestId: str
+    scope: Optional[str] = None
+    craving: V2Craving = Field(default_factory=V2Craving)
+    restrictions: V2Restrictions = Field(default_factory=V2Restrictions)
+    options: V2Options = Field(default_factory=V2Options)
+    candidates: List[RankCandidate] = Field(default_factory=list)
+    extracted: Optional[InterpretExtracted] = None
+
+    @model_validator(mode="after")
+    def _validate_rank(self):
+        if not self.requestId or len(self.requestId) > 128:
+            raise ValueError("requestId required")
+        if self.options.limit < 1 or self.options.limit > 10:
+            raise ValueError("options.limit must be between 1 and 10")
+        # bound candidate count to protect service; BE should pre-filter/acot
+        if len(self.candidates) > 200:
+            self.candidates = self.candidates[:200]
+        return self
+
+
+class RankItem(StrictModel):
+    dishId: str
+    score: float
+    confidence: float = 0.0
+    reasons: List[str] = Field(default_factory=list)
+
+
+class RankResponse(StrictModel):
+    requestId: str
+    ranked: List[RankItem] = Field(default_factory=list)
+    meta: Dict[str, Any] = Field(default_factory=dict)
+
+
+def _safe_request_id(req_id: Optional[str]) -> str:
+    if req_id and isinstance(req_id, str) and 0 < len(req_id.strip()) <= 128:
+        return req_id.strip()
+    seed = str(time.time())
+    return "ml_" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:24]
+
+
+_BUDGET_AMOUNT_RE = re.compile(r"(?:\$|mxn\s*)?([0-9]{1,6}(?:[\.,][0-9]{1,2})?)", re.IGNORECASE)
+_WRITTEN_AMOUNTS = {'diez': 10, 'veinte': 20, 'treinta': 30, 'cuarenta': 40,
+                    'cincuenta': 50, 'sesenta': 60, 'setenta': 70, 'ochenta': 80,
+                    'noventa': 90, 'cien': 100, 'ciento': 100}
+
+
+def _extract_budget_proposal(text: str) -> InterpretBudget:
+    t = (text or "").strip()
+    if not t:
+        return InterpretBudget()
+    lower = t.lower()
+    per_person = True if any(k in lower for k in ["por persona", "por cabeza", "cada quien", "c/u", "por integrante"]) else None
+    mentions_money = any(k in lower for k in ["$", "mxn", "peso", "pesitos", "varo", "presupuesto", "gastar", "cuesta", "barato", "econ"])
+    nums = _BUDGET_AMOUNT_RE.findall(t)
+    normalized = normalize_text(t)
+    words = re.findall(r'\b(diez|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien|ciento)\s+(?:pesos?|pesitos|varos?|mxn)\b', normalized)
+    nums.extend(str(_WRITTEN_AMOUNTS[word]) for word in words)
+    # ambiguous cases: ranges, multiple amounts, "entre", contradictory cues
+    ambiguous = False
+    notes: List[str] = []
+    if re.search(r'\b(?:ciento|doscientos|trescientos|cuatrocientos|quinientos|seiscientos|setecientos|ochocientos|novecientos|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa)\s+(?:y\s+)?(?:un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa)\s+(?:pesos?|pesitos|varos?|mxn)\b', normalized):
+        ambiguous = True
+        notes.append('compound_written_amount_not_supported')
+    if mentions_money and re.search(r'\b(?:mas o menos|alrededor de|aproximadamente|como unos?|unos?)\s+(?:\d|diez\b|veinte\b|treinta\b|cuarenta\b|cincuenta\b|sesenta\b|setenta\b|ochenta\b|noventa\b|cien\b)', normalized):
+        ambiguous = True
+        notes.append('approximate_budget')
+    if mentions_money and ("entre" in lower or "-" in lower):
+        ambiguous = True
+        notes.append("budget_range_or_between")
+    if len(nums) > 1 and mentions_money:
+        ambiguous = True
+        notes.append("multiple_amounts")
+    amount = None
+    currency = "MXN" if mentions_money else None
+    if mentions_money and nums and not ambiguous:
+        try:
+            raw = nums[0].replace(",", ".")
+            val = float(raw)
+            if math.isfinite(val) and val > 0 and val <= 100000 and round(val, 2) == val:
+                amount = val
+            else:
+                ambiguous = True
+                notes.append("amount_out_of_bounds_or_not_determinable")
+                amount = None
+        except Exception:
+            ambiguous = True
+            notes.append("amount_parse_error")
+    elif mentions_money and not nums:
+        ambiguous = True
+        notes.append("amount_not_determinable")
+    confidence = 0.0
+    if amount is not None and not ambiguous:
+        confidence = 0.75
+    elif mentions_money:
+        confidence = 0.35
+    return InterpretBudget(amount=amount, currency=currency, ambiguous=ambiguous, perPerson=per_person, confidence=confidence, notes=notes)
+
+
+def _normalize_diet_value(v: Optional[str]) -> str:
+    if not v:
+        return "none"
+    t = str(v).strip().lower().replace("-", "_")
+    if t in ["", "none", "sin_restricciones", "ninguna", "null"]:
+        return "none"
+    if t in ["vegetarian", "vegetariana"]:
+        return "vegetarian"
+    if t in ["vegan", "vegana"]:
+        return "vegan"
+    return t
+
+
+def _collect_terms_from_text(text: str) -> List[str]:
+    norm = normalize_text(text or "")
+    return [w for w in norm.split() if w and w not in STOP_WORDS and len(w) > 1]
+
+
+@app.post("/interpret", response_model=InterpretResponse)
+def interpret(req: InterpretRequest):
+    t0 = time.time()
+    try:
+        request_id = _safe_request_id(req.requestId or (req.options.requestId if req.options else None))
+        text = (req.craving.text or "") if req.craving else ""
+        tags = list(req.craving.tags or []) if req.craving else []
+        negated = parse_negations(text)
+
+        # allergies/exclusions: prefer structured; can reflect explicit mentions conservatively
+        allergies = [normalize_text(a) for a in (req.restrictions.allergies or []) if isinstance(a, str) and a.strip()]
+        for match in re.finditer(r'\balerg(?:ia|ico|ica)\s+(?:a|al)\s+(?:(?:la|el|los|las)\s+)?([a-z]+)', normalize_text(text)):
+            if match.group(1) not in allergies:
+                allergies.append(match.group(1))
+        excluded = [normalize_text(e) for e in (req.restrictions.excludedIngredients or []) if isinstance(e, str) and e.strip()]
+        # add negated terms as exclusion signals (proposal only)
+        for n in negated:
+            if n and n not in excluded:
+                excluded.append(n)
+
+        diet = _normalize_diet_value(req.restrictions.diet if req.restrictions else "none")
+        linguistic = analyze_mexican_spanish(text)
+        prefs = [normalize_text(x) for x in tags if isinstance(x, str) and x.strip()]
+        prefs += [w for w in _collect_terms_from_text(text)[:12] if w not in prefs]
+        for item in linguistic['mentions']:
+            if item['category'] in ('food', 'dish', 'food_category', 'flavor', 'texture', 'preference') and item['role'] == 'mentioned':
+                term = normalize_text(item['concept'])
+                if term not in prefs:
+                    prefs.append(term)
+        budget = _extract_budget_proposal(text)
+
+        ambiguous = False
+        conf = 0.7
+        if not text.strip() and not tags and not allergies and diet == "none" and not excluded and budget.amount is None and not budget.ambiguous:
+            ambiguous = True
+            conf = 0.4
+        if budget.ambiguous:
+            ambiguous = True
+            conf = min(conf, 0.55)
+
+        extracted = InterpretExtracted(
+            intent="recommendation",
+            preferences=prefs[:20],
+            allergies=allergies[:20],
+            diet=diet,
+            excludedIngredients=excluded[:20],
+            budget=budget,
+            entities=prefs[:10],
+            negations=negated[:20],
+        )
+        meta = {
+            "executionTimeMs": round((time.time() - t0) * 1000, 2),
+            "spacy_active": SPACY_AVAILABLE,
+            "version": "v2-interpret-min",
+            "linguistic": linguistic,
+        }
+        return InterpretResponse(requestId=request_id, extracted=extracted, confidence=round(conf, 3), ambiguous=ambiguous, meta=meta)
+    except HTTPException:
+        raise
+    except Exception as e:
+        # controlled error, no leak of internals beyond type
+        raise HTTPException(status_code=422, detail="invalid_interpret_request")
+
+
+def _candidate_to_dish_dict(c: RankCandidate) -> Dict[str, Any]:
+    return {
+        "id": c.id,
+        "nombre": c.nombre or "",
+        "descripcion": c.descripcion or "",
+        "categoria_nombre": c.categoria_nombre or "",
+        "precio": c.precio if c.precio is not None else 0.0,
+        "ingredientes_principales": list(c.ingredientes_principales or []),
+        "complementos": list(c.complementos or []),
+        "etiquetas_dieteticas": list(c.etiquetas_dieteticas or []),
+        "nivel_picante": c.nivel_picante or 0,
+        "activo": True,
+    }
+
+
+def _requested_spice(text: str) -> bool:
+    """A ranking preference only; exclusions remain the backend's responsibility."""
+    normalized = normalize_text(text)
+    positive = re.search(r'\b(?:picos[oa]s?|picoson(?:a)?|picantes?|pique|enchilos[oa]s?|enchilosit[oa]s?)\b', normalized)
+    if not positive:
+        return False
+    before = normalized[max(0, positive.start() - 25):positive.start()]
+    if re.search(r'\bno me molesta(?: que)?\s*$', before):
+        return False
+    return not re.search(r'\b(?:sin|no|nada de)\s+(?:muy\s+)?$', before)
+
+
+def _rank_candidates_internal(req: RankRequest) -> List[RankItem]:
+    candidates = req.candidates or []
+    if not candidates:
+        return []
+    craving = req.craving or V2Craving()
+    extracted = req.extracted
+    user_text = (craving.text or "").strip()
+    if (not user_text) and extracted and extracted.preferences:
+        user_text = " ".join(extracted.preferences[:8])
+    user_tags = list(craving.tags or [])
+    if extracted and extracted.preferences:
+        for p in extracted.preferences:
+            if p and p not in user_tags and len(user_tags) < 12:
+                user_tags.append(p)
+
+    # scoring over provided candidates only (no eligibility decisions, no DB, no invented dishes)
+    dishes = [_candidate_to_dish_dict(c) for c in candidates]
     dish_docs = []
-    for d in safe_dishes:
+    for d in dishes:
         name = normalize_text(d.get("nombre", ""))
         cat = normalize_text(d.get("categoria_nombre", ""))
         desc = normalize_text(d.get("descripcion", ""))
@@ -395,176 +478,137 @@ def get_recommendations(req: RecommendationRequest):
         tags = " ".join([normalize_text(str(t)) for t in (d.get("etiquetas_dieteticas") or [])])
         dish_docs.append(f"{name} {name} {cat} {ing_main} {desc} {tags}")
 
-    query_doc = f"{user_text_norm} {' '.join(user_tags_norm)}"
-    if not query_doc.strip():
-        query_doc = "comida deliciosa platillo especial"
+    user_text_norm = normalize_text(user_text)
+    wants_spice = _requested_spice(user_text)
+    wants_shrimp = bool(re.search(r'\b(?:quiero|busco)\s+(?:unos?\s+)?camarones?\b', user_text_norm))
+    user_tags_norm = [normalize_text(t) for t in user_tags]
+    user_words = [w for w in user_text_norm.split() if w not in STOP_WORDS and len(w) > 1]
+    query_terms = list(dict.fromkeys(user_words + user_tags_norm))
+    query_doc = f"{user_text_norm} {' '.join(user_tags_norm)}".strip() or "comida platillo"
 
+    semantic_sims = [0.0] * len(dishes)
     try:
-        vectorizer = TfidfVectorizer(token_pattern=r'(?u)\b\w+\b', ngram_range=(1, 2))
-        tfidf_matrix = vectorizer.fit_transform(dish_docs + [query_doc])
-        dish_vectors = tfidf_matrix[:-1]
-        query_vector = tfidf_matrix[-1:]
-        semantic_sims = cosine_similarity(query_vector, dish_vectors)[0]
+        if dish_docs:
+            vectorizer = TfidfVectorizer(token_pattern=r"(?u)\b\w+\b", ngram_range=(1, 2))
+            tfidf_matrix = vectorizer.fit_transform(dish_docs + [query_doc])
+            dish_vectors = tfidf_matrix[:-1]
+            query_vector = tfidf_matrix[-1:]
+            sims = cosine_similarity(query_vector, dish_vectors)[0]
+            semantic_sims = [float(x) for x in sims]
     except Exception:
-        semantic_sims = [0.5] * len(safe_dishes)
+        semantic_sims = [0.0] * len(dishes)
 
-    scored_items = []
-    for idx, d in enumerate(safe_dishes):
+    scored: List[Tuple[float, RankItem, str]] = []
+    for idx, d in enumerate(dishes):
         d_name = normalize_text(d.get("nombre", ""))
         d_cat = normalize_text(d.get("categoria_nombre", ""))
         d_desc = normalize_text(d.get("descripcion", ""))
         d_ing_main = [normalize_text(str(i)) for i in (d.get("ingredientes_principales") or [])]
         d_tags = [normalize_text(str(t)) for t in (d.get("etiquetas_dieteticas") or [])]
-
         raw_score = 0.0
-
-        # Exact phrase match in name (e.g. "tacos al pastor")
-        if user_text_norm and user_text_norm in d_name:
+        if user_text_norm and user_text_norm in d_name and len(user_text_norm) >= 3:
             raw_score += WEIGHTS["EXACT_PHRASE"]
-
         for term in query_terms:
             if not term:
                 continue
-
-            # Exact token match in name
             d_name_words = set(d_name.split())
             d_cat_words = set(d_cat.split())
-
             if term in d_name_words:
                 raw_score += WEIGHTS["NAME"]
             elif any(term in word for word in d_name_words):
                 raw_score += WEIGHTS["NAME"] * 0.7
             else:
-                # Fuzzy match in name
                 best_fuzzy = max([fuzzy_similarity(term, word) for word in d_name_words] + [0.0])
                 if best_fuzzy >= 0.60:
                     raw_score += WEIGHTS["NAME"] * best_fuzzy
-
-            # Category match
             if term in d_cat_words:
                 raw_score += WEIGHTS["CATEGORY"]
             elif any(term in word for word in d_cat_words):
                 raw_score += WEIGHTS["CATEGORY"] * 0.5
-
-            # Main Ingredients match
             for ing in d_ing_main:
                 if term in ing or any(fuzzy_similarity(term, word) >= 0.75 for word in ing.split()):
                     raw_score += WEIGHTS["MAIN_INGREDIENT"]
-
-            # Description match
             if term in d_desc:
                 raw_score += WEIGHTS["DESCRIPTION"]
-
-            # Tags match
             for tag in d_tags:
                 if term in tag:
                     raw_score += WEIGHTS["TAGS"]
-
-            # Fuzzy match with Synonym Maps (e.g., "pastro" fuzzy matches "pastor" in PROTEIN_MAP)
-            protein_matched = False
-            for protein, synonyms in PROTEIN_MAP.items():
-                if protein_matched:
-                    break
-                if any(fuzzy_similarity(term, syn) >= 0.70 for syn in synonyms) or term == protein:
-                    for syn in synonyms:
-                        syn_norm = normalize_text(syn)
-                        if syn_norm in d_name:
-                            raw_score += WEIGHTS["NAME"] * 1.5
-                            protein_matched = True
-                            break
-                        elif any(syn_norm in i for i in d_ing_main):
-                            raw_score += WEIGHTS["MAIN_INGREDIENT"] * 1.2
-                            protein_matched = True
-                            break
-
-            dish_type_matched = False
-            for dish_type, synonyms in DISH_TYPE_MAP.items():
-                if dish_type_matched:
-                    break
-                if any(fuzzy_similarity(term, syn) >= 0.70 for syn in synonyms) or term == dish_type:
-                    for syn in synonyms:
-                        syn_norm = normalize_text(syn)
-                        if syn_norm in d_name:
-                            raw_score += WEIGHTS["NAME"] * 1.5
-                            dish_type_matched = True
-                            break
-                        elif syn_norm in d_cat:
-                            raw_score += WEIGHTS["CATEGORY"] * 1.2
-                            dish_type_matched = True
-                            break
-                            raw_score += WEIGHTS["CATEGORY"] * 0.8
-
-        # Add semantic similarity
-        tfidf_sim = float(semantic_sims[idx]) if idx < len(semantic_sims) else 0.0
+        tfidf_sim = semantic_sims[idx] if idx < len(semantic_sims) else 0.0
         raw_score += (tfidf_sim * WEIGHTS["SEMANTIC"] * 3.0)
+        has_shrimp = bool(re.search(r'\bcamaron(?:es)?\b', dish_docs[idx]))
+        if wants_shrimp and has_shrimp:
+            raw_score += 4.0
 
-        # Require a minimum raw_score to consider the dish relevant to the query
-        if raw_score <= 0.10:
-            continue
+        # Catalog-declared spice affects order, not eligibility or safety.
+        # Unknown and zero receive no bonus; no value is inferred from the name.
+        spice_level = candidates[idx].nivel_picante
+        if wants_spice and isinstance(spice_level, int) and 0 < spice_level <= 4:
+            raw_score += spice_level * 3.0
 
-        # Continuous linear/sigmoid score calculation for smooth ranking
-        final_score = min(0.99, max(0.70, round(0.70 + (math.tanh(raw_score / 4.0) * 0.29), 4)))
-        match_percentage = int(round(final_score * 100))
+        # deterministic, bounded score; confidence marked as estimate
+        score = min(0.99, max(0.0, round(0.55 + (math.tanh(raw_score / 4.0) * 0.44), 4)))
+        if wants_shrimp and not has_shrimp:
+            score = round(score / 2.0, 4)
+        if wants_spice and isinstance(spice_level, int) and 0 <= spice_level <= 4:
+            # Give equal weight to text relevance and the declared spice scale.
+            # This is an ordering signal, not a safety or confidence threshold.
+            score = min(0.99, round((score + spice_level / 4.0) / 2.0, 4))
+        confidence = min(0.95, max(0.3, round(0.45 + (tfidf_sim * 0.4) + (0.05 if raw_score > 0.5 else 0.0), 3)))
+        reasons: List[str] = []
+        if wants_shrimp and not has_shrimp:
+            reasons.append("No consta camarón en los datos del menú; coincidencia parcial.")
+        if wants_spice and spice_level == 0:
+            reasons.append("El menú declara nivel de picante 0; coincidencia parcial.")
+        if wants_spice and isinstance(spice_level, int) and 0 < spice_level <= 4:
+            reasons.append("Nivel de picante declarado en el menú.")
+        if raw_score > 0.5 and (user_text_norm or user_tags_norm):
+            reasons.append("Coincide con preferencias o descripciÃ³n proporcionada.")
+        if tfidf_sim >= 0.1:
+            reasons.append("Similitud semÃ¡ntica con la solicitud.")
+        if not reasons:
+            reasons.append("Candidato elegible considerado segÃºn datos disponibles.")
+        item = RankItem(dishId=str(d.get("id")), score=score, confidence=confidence, reasons=reasons[:3])
+        scored.append((raw_score, item, d_name))
 
-        display_tags = list(d.get("etiquetas_dieteticas") or [])
-        if not display_tags and d.get("ingredientes_principales"):
-            display_tags = [str(i) for i in d.get("ingredientes_principales")[:3]]
+    scored.sort(key=lambda x: (-x[0], x[2], x[1].dishId))
+    limit = req.options.limit if req.options and req.options.limit else 5
+    return [it for _, it, _ in scored[:limit]]
 
-        dish_rest_id = d.get("restaurante_id") or req.restaurant_id
-        dish_rest_name = d.get("restaurante_nombre") or (req.restaurant.get("name") if req.restaurant else "Restaurante")
-        dish_rest_slug = d.get("restaurante_slug") or dish_rest_id
-        dish_menu_url = d.get("menuUrl") or (req.restaurant.get("menuUrl") if req.restaurant else f"/menu/{dish_rest_slug}")
 
-        reasons = generate_reasons(d, req.craving or CravingInput(), req.diet or "none", req.allergies or [])
-
-        dish_out = DishOutput(
-            id=str(d.get("id", "")),
-            nombre=str(d.get("nombre", "Platillo")),
-            descripcion=str(d.get("descripcion", "")),
-            precio=float(d.get("precio", 0.0)),
-            url_imagen=str(d.get("url_imagen", "")),
-            nivel_picante=int(d.get("nivel_picante", 0)),
-            porcion=str(d.get("porcion", "")),
-            categoria_nombre=str(d.get("categoria_nombre", "")),
-            etiquetas_dieteticas=list(d.get("etiquetas_dieteticas") or []),
-            ingredientes_principales=[str(i) for i in (d.get("ingredientes_principales") or [])]
-        )
-
-        rest_out = RestaurantOutput(
-            id=str(dish_rest_id),
-            name=str(dish_rest_name),
-            slug=str(dish_rest_slug),
-            menuUrl=str(dish_menu_url)
-        )
-
-        scored_items.append(RecommendationItem(
-            dish=dish_out,
-            restaurant=rest_out,
-            matchScore=final_score,
-            matchPercentage=match_percentage,
-            reasons=reasons,
-            tags=display_tags
-        ))
-
-    # Sort descending by matchScore
-    scored_items.sort(key=lambda x: x.matchScore, reverse=True)
-    limit = req.limit or 5
-    top_recommendations = scored_items[:limit]
-
-    return RecommendationResponse(
-        recommendations=top_recommendations,
-        meta={
-            "restaurant_id": req.restaurant_id,
-            "totalCandidates": total_candidates,
-            "filteredByAllergies": filtered_allergies_count,
-            "filteredByNegations": filtered_negations_count,
-            "filteredByDiet": filtered_diet_count,
-            "recommendedCount": len(top_recommendations),
-            "executionTimeMs": round((time.time() - start_time) * 1000, 2)
+@app.post("/rank", response_model=RankResponse)
+def rank(req: RankRequest):
+    t0 = time.time()
+    try:
+        # validate/normalize candidates: only provided ids can be returned
+        seen = set()
+        valid_candidates: List[RankCandidate] = []
+        for c in (req.candidates or []):
+            if not c or not c.id:
+                continue
+            cid = str(c.id)
+            if cid in seen:
+                continue
+            seen.add(cid)
+            valid_candidates.append(c)
+        try:
+            req_norm = req.model_copy(update={"candidates": valid_candidates})  # pydantic v2
+        except Exception:
+            req_norm = RankRequest(**{**req.model_dump(), "candidates": valid_candidates})
+        ranked = _rank_candidates_internal(req_norm)
+        # hard guarantee: ranked ids subset of candidates
+        allowed = {str(c.id) for c in valid_candidates}
+        ranked = [r for r in ranked if r.dishId in allowed]
+        meta = {
+            "executionTimeMs": round((time.time() - t0) * 1000, 2),
+            "candidateCount": len(valid_candidates),
+            "returned": len(ranked),
+            "version": "v2-rank-min",
         }
-    )
+        return RankResponse(requestId=req.requestId, ranked=ranked, meta=meta)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=422, detail="invalid_rank_request")
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+
+
