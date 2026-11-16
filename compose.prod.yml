@@ -38,18 +38,19 @@ services:
     env_file:
       - .env
     environment:
+      - NODE_ENV=production
+      - LOCAL_MXN_BUDGET=false
+      - DISABLE_STARTUP_DDL=false
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - ML_SERVICE_URL=http://ml-service:8000
       - S3_BUCKET_NAME=${S3_BUCKET_NAME:-oamdevsol-assets-256663926988}
       - CLOUDFRONT_DOMAIN=${CLOUDFRONT_DOMAIN:-https://images.oamdevsol.site}
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - ML_SERVICE_URL=${ML_SERVICE_URL:-http://app-ml-service-1:8000}
-    volumes:
-      - uploads_data_prod:/app/uploads
     networks:
       - public-net
       - private-net
@@ -58,6 +59,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health',r=>process.exit(r.statusCode===200?0:1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - uploads_data_prod:/app/uploads
 
   ml-service:
     build:
@@ -70,6 +81,12 @@ services:
     networks:
       - public-net
       - private-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend-comensales:
     build:

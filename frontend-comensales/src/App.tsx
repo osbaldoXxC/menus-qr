@@ -6,7 +6,6 @@ import { NoSabesQueComer as HomeDiners } from './pages/Landing/NoSabesQueComer';
 import { Descubrir } from './pages/Descubrir/Descubrir';
 import { CuestionarioIA } from './pages/CuestionarioIA/CuestionarioIA';
 import { PublicMenu } from './pages/PublicMenu/PublicMenu';
-import { EscanearQR } from './pages/EscanearQR/EscanearQR';
 import { NotFound } from './pages/NotFound/NotFound';
 
 function DinerRoutes() {
@@ -17,7 +16,6 @@ function DinerRoutes() {
       <Route path="/descubrir" element={<Descubrir />} />
       <Route path="/cuestionario" element={<CuestionarioIA />} />
       <Route path="/menu/:restaurant_id" element={<PublicMenu />} />
-      <Route path="/escanear/:id?" element={<EscanearQR />} />
 
       {/* 404 Not Found */}
       <Route path="*" element={<NotFound />} />

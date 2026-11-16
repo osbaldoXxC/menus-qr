@@ -1,0 +1,68 @@
+﻿services:
+  postgres:
+    image: sha256:a36250871de0833b8757561c72f2477ef1ddd1101afa4e617fb552e0de514c6b
+    environment:
+      POSTGRES_USER: dec012_test
+      POSTGRES_PASSWORD: ${DEC012_TEST_PASSWORD:-isolated-test-only}
+      POSTGRES_DB: dec012_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ../../../src/db/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./fixtures.sql:/docker-entrypoint-initdb.d/02-fixtures.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U dec012_test -d dec012_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
+    command: [redis-server, --save, "", --appendonly, "no"]
+    tmpfs:
+      - /data
+  ml:
+    image: sha256:823a2cfb7b28eb109af3e277377eb005446c61c39dd1530d4d19dbedf1c84992
+    volumes:
+      - ../../../../ml-service/main.py:/app/main.py:ro
+      - ../../../../ml-service/tests:/app/tests:ro
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+  backend:
+    image: sha256:35a336c7d31a098c279dd04729bd00458f634b1d7f8b3e71ea858b8a721e8c68
+    environment: &backend-env
+      NODE_ENV: test
+      DATABASE_URL: postgresql://dec012_test:${DEC012_TEST_PASSWORD:-isolated-test-only}@postgres:5432/dec012_test
+      REDIS_URL: redis://redis:6379
+      ML_SERVICE_URL: http://ml:8000
+      JWT_SECRET: isolated-test-only-not-a-production-secret
+      REFRESH_TOKEN_SECRET: isolated-test-only-not-a-production-secret
+      PORT: 4000
+    volumes:
+      - ../../../src:/app/src:ro
+    ports:
+      - 127.0.0.1:41473:4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml:
+        condition: service_healthy
+  backend-fallback:
+    image: sha256:35a336c7d31a098c279dd04729bd00458f634b1d7f8b3e71ea858b8a721e8c68
+    environment:
+      <<: *backend-env
+      ML_SERVICE_URL: http://127.0.0.1:1
+      ML_SERVICE_TIMEOUT: 1000
+    volumes:
+      - ../../../src:/app/src:ro
+    ports:
+      - 127.0.0.1:41474:4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+networks:
+  default:
+    internal: true
+

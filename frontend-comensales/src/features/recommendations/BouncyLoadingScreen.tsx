@@ -5,6 +5,7 @@ interface BouncyLoadingScreenProps {
   isReady?: boolean;
   onComplete?: () => void;
   minDurationMs?: number;
+  showSpacyStatus?: boolean;
 }
 
 const LOADING_MESSAGES = [
@@ -17,7 +18,8 @@ const LOADING_MESSAGES = [
 export const BouncyLoadingScreen: React.FC<BouncyLoadingScreenProps> = ({
   isReady = true,
   onComplete,
-  minDurationMs = 1800
+  minDurationMs = 1800,
+  showSpacyStatus = true
 }) => {
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
@@ -47,6 +49,9 @@ export const BouncyLoadingScreen: React.FC<BouncyLoadingScreenProps> = ({
 
   return (
     <motion.div
+      role="status"
+      aria-live="polite"
+      aria-label="Buscando platillos"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -57,11 +62,11 @@ export const BouncyLoadingScreen: React.FC<BouncyLoadingScreenProps> = ({
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
         <motion.div
           animate={{
-            scale: [1, 1.12, 1],
-            opacity: [0.15, 0.25, 0.15]
+            scale: [1, 1.06, 1],
+            opacity: [0.044, 0.072, 0.044]
           }}
           transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-          className="w-[480px] h-[480px] rounded-full bg-gradient-to-tr from-[#FF2A54] via-[#FF4A00] to-[#FF8C00] blur-[120px]"
+          className="w-[320px] h-[320px] rounded-full bg-[#FFB780] blur-[100px]"
         />
       </div>
 
@@ -72,7 +77,7 @@ export const BouncyLoadingScreen: React.FC<BouncyLoadingScreenProps> = ({
         transition={{ duration: 0.4 }}
         className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.06] backdrop-blur-xl mb-10 shadow-sm"
       >
-        <span className="w-2 h-2 rounded-full bg-[#FF4A00] animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-[#FF4A00] animate-pulse motion-reduce:animate-none" />
         <span className="text-[11px] font-bold uppercase tracking-widest text-[#86868B] dark:text-[#A1A1A6]">
           IA Gastronómica · Descubriendo
         </span>
@@ -130,7 +135,7 @@ export const BouncyLoadingScreen: React.FC<BouncyLoadingScreenProps> = ({
             repeat: Infinity,
             ease: [0.34, 1.56, 0.64, 1]
           }}
-          className="relative z-10 w-24 h-24 rounded-[26px] bg-gradient-to-tr from-[#FF2A54] via-[#FF4A00] to-[#FF8C00] shadow-[0_16px_36px_rgba(255,74,0,0.32)] flex items-center justify-center p-[2.5px]"
+          className="relative z-10 w-24 h-24 rounded-[26px] bg-gradient-to-tr from-[#FF2A54] via-[#FF4A00] to-[#FF8C00] shadow-[0_16px_36px_rgba(255,74,0,0.23)] flex items-center justify-center p-[2.5px]"
         >
           {/* Contenedor interior nítido con el emoji natural 1:1 */}
           <div className="w-full h-full rounded-[23px] bg-white dark:bg-[#141416] flex items-center justify-center relative overflow-hidden">
@@ -157,6 +162,19 @@ export const BouncyLoadingScreen: React.FC<BouncyLoadingScreenProps> = ({
 
       </div>
 
+      {/* ── SPAcY STATUS INDICATOR ── */}
+      {showSpacyStatus && <div className="mb-8">
+        <span
+          data-testid="spacy-active"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#FF4A00]/30 bg-[#FF4A00]/10 backdrop-blur-xl shadow-md animate-pulse"
+        >
+          <span className="text-[#FF4A00]">✨</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-[#FF4A00]">
+            spaCy NLP Activado
+          </span>
+        </span>
+      </div>}
+
       {/* ── TEXTOS DINÁMICOS Y ANIMADOS ── */}
       <div className="text-center max-w-sm px-6 h-16 flex flex-col items-center justify-center">
         <AnimatePresence mode="wait">
@@ -174,20 +192,6 @@ export const BouncyLoadingScreen: React.FC<BouncyLoadingScreenProps> = ({
         <p className="text-[12px] font-medium text-[#86868B] dark:text-[#A1A1A6] mt-1.5">
           Preparando tu experiencia personalizada
         </p>
-      </div>
-
-      {/* ── BARRA DE PROGRESO FLUIDA ── */}
-      <div className="w-44 h-1 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden mt-6">
-        <motion.div
-          initial={{ x: '-100%' }}
-          animate={{ x: '100%' }}
-          transition={{
-            duration: 1.3,
-            repeat: Infinity,
-            ease: 'easeInOut'
-          }}
-          className="w-1/2 h-full rounded-full bg-gradient-to-r from-[#FF2A54] via-[#FF4A00] to-[#FF8C00]"
-        />
       </div>
 
     </motion.div>

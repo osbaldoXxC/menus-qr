@@ -101,14 +101,96 @@ CREATE TABLE IF NOT EXISTS platillos (
     activo BOOLEAN DEFAULT true, -- Soporte para pausado lógico
     ingredientes_principales JSONB DEFAULT '[]'::jsonb,
     complementos JSONB DEFAULT '[]'::jsonb,
+    -- B1-T04-C1: secciones de receta/catálogo para verificación y completitud (conservador)
+    ingredientes_secundarios JSONB DEFAULT '[]'::jsonb,
+    salsas JSONB DEFAULT '[]'::jsonb,
+    aderezos JSONB DEFAULT '[]'::jsonb,
+    condimentos JSONB DEFAULT '[]'::jsonb,
+    ingredientes_compuestos JSONB DEFAULT '[]'::jsonb,
+    sustituciones_permitidas JSONB DEFAULT '[]'::jsonb,
+    modificadores_opcionales JSONB DEFAULT '[]'::jsonb,
+    alergenos_declarados JSONB DEFAULT '[]'::jsonb,
+    contacto_cruzado JSONB NULL,
     nivel_picante INTEGER DEFAULT 0, -- Escala de 0 a 4
     porcion VARCHAR(100) DEFAULT '', -- Ej: "350g", "3 piezas", "500 ml"
     etiquetas_dieteticas JSONB DEFAULT '[]'::jsonb, -- Ej: ["sin_gluten", "vegano"]
     estado_ia VARCHAR(50) DEFAULT 'pendiente', -- 'pendiente', 'procesando', 'completado'
+    -- B1-T04-C1: metadatos de verificación (históricos no auto-verificados)
+    verification_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    verification_state VARCHAR(50) NOT NULL DEFAULT 'declared_unverified',
+    completeness_state VARCHAR(50) NOT NULL DEFAULT 'incomplete',
+    cross_contamination_state VARCHAR(50) NOT NULL DEFAULT 'not_assessed',
+    verified_recipe_version VARCHAR(128) NULL,
+    current_recipe_version VARCHAR(128) NULL,
+    verified_by UUID NULL,
+    verified_at TIMESTAMP WITH TIME ZONE NULL,
+    verification_source VARCHAR(255) NULL,
+    verification_updated_at TIMESTAMP WITH TIME ZONE NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON COLUMN platillos.tamano_porcion_id IS 'Foreign key to tamanos_porcion catalog; reserved for portion size normalization';
+COMMENT ON COLUMN platillos.verification_metadata IS 'B1-T04: metadatos de verificación/completitud/contacto cruzado/assessments; nunca auto-verificado';
+COMMENT ON COLUMN platillos.verification_state IS 'B1-T04: declared_unverified|reviewed|verified_approved|outdated|invalidated_by_change|conflict';
+COMMENT ON COLUMN platillos.completeness_state IS 'B1-T04: estado conservador de completitud del catálogo';
+COMMENT ON COLUMN platillos.cross_contamination_state IS 'B1-T04: verified_controlled|possible|unknown|not_assessed';
+COMMENT ON COLUMN platillos.verified_recipe_version IS 'B1-T04: versión de receta aprobada (debe coincidir con current para vigencia)';
+COMMENT ON COLUMN platillos.current_recipe_version IS 'B1-T04: versión hash actual de receta/catálogo';
+
+-- B1-T04-C1: Catálogo canónico de alérgenos y términos documentados
+CREATE TABLE IF NOT EXISTS alergenos_canonicos (
+    id VARCHAR(64) PRIMARY KEY,
+    nombre_canonico VARCHAR(120) NOT NULL UNIQUE,
+    descripcion TEXT NULL,
+    fuente VARCHAR(255) NULL,
+    nivel_verificacion VARCHAR(50) NULL,
+    activo BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS alergeno_terminos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    alergeno_id VARCHAR(64) NOT NULL REFERENCES alergenos_canonicos(id) ON DELETE CASCADE,
+    termino_normalizado VARCHAR(255) NOT NULL,
+    tipo VARCHAR(50) NOT NULL, -- sinonimo | variante | derivado | compuesto
+    fuente VARCHAR(255) NULL,
+    nivel_verificacion VARCHAR(50) NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (alergeno_id, termino_normalizado, tipo)
+);
+
+-- B1-T04-C1: Auditoría de cambios de verificación de platillos
+CREATE TABLE IF NOT EXISTS platillo_verificacion_auditoria (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    platillo_id UUID NOT NULL REFERENCES platillos(id) ON DELETE CASCADE,
+    restaurante_id UUID NOT NULL,
+    accion VARCHAR(100) NOT NULL,
+    estado_anterior JSONB NULL,
+    estado_nuevo JSONB NULL,
+    actor_id UUID NULL,
+    actor_rol VARCHAR(50) NULL,
+    motivo TEXT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Semilla idempotente de alérgenos canónicos base (B1-T04)
+INSERT INTO alergenos_canonicos (id, nombre_canonico, fuente, nivel_verificacion) VALUES
+('gluten','gluten','catalogo_base_documentado_b1t04','documented_rule'),
+('crustaceos','crustaceos','catalogo_base_documentado_b1t04','documented_rule'),
+('huevo','huevo','catalogo_base_documentado_b1t04','documented_rule'),
+('pescado','pescado','catalogo_base_documentado_b1t04','documented_rule'),
+('cacahuate','cacahuate','catalogo_base_documentado_b1t04','documented_rule'),
+('soya','soya','catalogo_base_documentado_b1t04','documented_rule'),
+('lacteos','lacteos','catalogo_base_documentado_b1t04','documented_rule'),
+('frutos_secos','frutos_secos','catalogo_base_documentado_b1t04','documented_rule'),
+('apio','apio','catalogo_base_documentado_b1t04','documented_rule'),
+('mostaza','mostaza','catalogo_base_documentado_b1t04','documented_rule'),
+('sesamo','sesamo','catalogo_base_documentado_b1t04','documented_rule'),
+('sulfitos','sulfitos','catalogo_base_documentado_b1t04','documented_rule'),
+('altramuces','altramuces','catalogo_base_documentado_b1t04','documented_rule'),
+('moluscos','moluscos','catalogo_base_documentado_b1t04','documented_rule')
+ON CONFLICT (id) DO NOTHING;
 
 -- 6. Ingredientes_Catalogo
 CREATE TABLE IF NOT EXISTS ingredientes_catalogo (
@@ -292,3 +374,7 @@ CREATE INDEX IF NOT EXISTS idx_platillos_restaurante ON platillos(restaurante_id
 CREATE INDEX IF NOT EXISTS idx_categorias_restaurante_id ON categorias_restaurante(restaurante_id);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_platillos_activo ON platillos(activo) WHERE activo = true;
+CREATE INDEX IF NOT EXISTS idx_alergeno_terminos_termino ON alergeno_terminos(termino_normalizado);
+CREATE INDEX IF NOT EXISTS idx_alergeno_terminos_alergeno ON alergeno_terminos(alergeno_id);
+CREATE INDEX IF NOT EXISTS idx_platillo_verif_aud_platillo ON platillo_verificacion_auditoria(platillo_id);
+CREATE INDEX IF NOT EXISTS idx_platillo_verif_aud_restaurante ON platillo_verificacion_auditoria(restaurante_id);

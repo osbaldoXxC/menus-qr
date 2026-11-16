@@ -11,110 +11,13 @@ interface DescubrirResultadosProps {
   onRefine?: () => void;
 }
 
-const FALLBACK_RECOMMENDATIONS: RecommendationItem[] = [
-  {
-    dish: {
-      id: 'f1',
-      nombre: 'Dumplings al Vapor (Jiaozi)',
-      descripcion: 'Tu antojo de comida oriental y sabores auténticos coincide al 99% con esta receta tradicional del chef.',
-      precio: 125,
-      url_imagen: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=800&q=80',
-      nivel_picante: 1,
-      porcion: '6 piezas',
-      categoria_nombre: 'Oriental',
-      etiquetas_dieteticas: [],
-      ingredientes_principales: ['Cerdo molido', 'Cebollín chino', 'Jengibre fresco', 'Salsa de soya', 'Masa artesanal']
-    },
-    restaurant: {
-      id: '22222222-2222-2222-2222-222222222222',
-      name: 'Gran Dragón Dorado',
-      slug: 'gran-dragon-dorado',
-      menuUrl: '/menu/22222222-2222-2222-2222-222222222222'
-    },
-    matchScore: 0.99,
-    matchPercentage: 99,
-    reasons: ['🍜 Coincide con tu antojo de comida Oriental'],
-    tags: ['Cerdo molido', 'Cebollín chino', 'Jengibre fresco']
-  },
-  {
-    dish: {
-      id: 'f2',
-      nombre: 'Filete Mignon al Oporto',
-      descripcion: 'Ideal para una ocasión especial. La reducción al Oporto y el puré trufado ofrecen una experiencia inigualable.',
-      precio: 480,
-      url_imagen: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80',
-      nivel_picante: 0,
-      porcion: '300g',
-      categoria_nombre: 'Gourmet',
-      etiquetas_dieteticas: ['sin_gluten'],
-      ingredientes_principales: ['Corte Filete Mignon', 'Vino Oporto', 'Mantequilla trufada']
-    },
-    restaurant: {
-      id: '55555555-5555-5555-5555-555555555555',
-      name: "L'Étoile Gourmet",
-      slug: 'letoile-gourmet',
-      menuUrl: '/menu/55555555-5555-5555-5555-555555555555'
-    },
-    matchScore: 0.97,
-    matchPercentage: 97,
-    reasons: ['🥩 Coincide con tu gusto por cortes premium'],
-    tags: ['sin_gluten', 'gourmet']
-  },
-  {
-    dish: {
-      id: 'f3',
-      nombre: 'Pato Pekín Laminado',
-      descripcion: 'Un clásico de la cocina imperial. Su piel laqueada ultra crujiente te fascinará al primer bocado.',
-      precio: 450,
-      url_imagen: 'https://images.unsplash.com/photo-1514944288352-fffac99f0bdf?auto=format&fit=crop&w=800&q=80',
-      nivel_picante: 1,
-      porcion: 'Para compartir',
-      categoria_nombre: 'Oriental',
-      etiquetas_dieteticas: [],
-      ingredientes_principales: ['Pato entero', 'Crepas chinas', 'Salsa Hoisin']
-    },
-    restaurant: {
-      id: '22222222-2222-2222-2222-222222222222',
-      name: 'Gran Dragón Dorado',
-      slug: 'gran-dragon-dorado',
-      menuUrl: '/menu/22222222-2222-2222-2222-222222222222'
-    },
-    matchScore: 0.95,
-    matchPercentage: 95,
-    reasons: ['🦆 Receta icónica del chef'],
-    tags: ['imperial']
-  },
-  {
-    dish: {
-      id: 'f4',
-      nombre: 'Tártara de Atún Aleta Azul',
-      descripcion: 'Frescura y sofisticación. El marinado cítrico resalta la textura premium del atún fresco.',
-      precio: 285,
-      url_imagen: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=800&q=80',
-      nivel_picante: 0,
-      porcion: '200g',
-      categoria_nombre: 'Gourmet',
-      etiquetas_dieteticas: ['sin_gluten', 'keto'],
-      ingredientes_principales: ['Atún fresco', 'Aguacate', 'Aceite de sésamo']
-    },
-    restaurant: {
-      id: '55555555-5555-5555-5555-555555555555',
-      name: "L'Étoile Gourmet",
-      slug: 'letoile-gourmet',
-      menuUrl: '/menu/55555555-5555-5555-5555-555555555555'
-    },
-    matchScore: 0.93,
-    matchPercentage: 93,
-    reasons: ['🐟 Opción fresca e ideal para el verano'],
-    tags: ['sin_gluten', 'keto']
-  }
-];
-
 export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefine }) => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useContext(ThemeContext);
   const isDark = theme === 'dark';
 
+  const [errorMessage, setErrorMessage] = useState('');
+  const [safetyMessage, setSafetyMessage] = useState('');
   const [loading, setLoading] = useState<boolean>(true);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -133,12 +36,16 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
 
   const fetchRecommendations = async () => {
     setLoading(true);
+    setErrorMessage('');
+    setRecommendations([]);
+    setSessionRestaurants([]);
 
-    let cravingText = 'Algo delicioso';
+    let cravingText = '';
     let cravingTags: string[] = [];
     let diet = 'none';
     let allergies: string[] = [];
-    let socialContext = 'solo';
+    let budgetMax: number | undefined;
+    let excludedIngredients: string[] = [];
 
     const savedState = localStorage.getItem('mexxicanmx_cuestionario_state');
     if (savedState) {
@@ -148,7 +55,8 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
         cravingTags = parsed.cravingTags || cravingTags;
         diet = parsed.diet || diet;
         allergies = parsed.allergies || allergies;
-        socialContext = parsed.socialContext || socialContext;
+        budgetMax = parsed.budgetMax;
+        excludedIngredients = parsed.excludedIngredients || [];
       } catch (e) {
         console.warn('Error parseando cuestionario state:', e);
       }
@@ -159,10 +67,11 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
         craving: { text: cravingText, tags: cravingTags },
         diet,
         allergies,
-        socialContext,
-        limit: 8
+        budgetMax,
+        excludedIngredients
       });
 
+      setSafetyMessage(res.safety.disclaimer);
       if (res && res.recommendations && res.recommendations.length > 0) {
         setRecommendations(res.recommendations);
         setSelectedIndex(0);
@@ -173,7 +82,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
             uniqueRestMap.set(item.restaurant.id, {
               ...item.restaurant,
               topDish: item.dish.nombre,
-              topScore: item.matchPercentage
+              topScore: null
             });
           }
         });
@@ -184,7 +93,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
         setSessionRestaurants([]);
       }
     } catch (err) {
-      console.warn('Error en recomendador:', err);
+      setErrorMessage('No se pudieron obtener recomendaciones. Revisa tus datos e intenta de nuevo.');
       setRecommendations([]);
       setSessionRestaurants([]);
     } finally {
@@ -192,16 +101,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
     }
   };
 
-  const useFallback = () => {
-    setRecommendations(FALLBACK_RECOMMENDATIONS);
-    setSelectedIndex(0);
-    setSessionRestaurants([
-      { id: FALLBACK_RECOMMENDATIONS[0].restaurant.id, name: FALLBACK_RECOMMENDATIONS[0].restaurant.name, topDish: FALLBACK_RECOMMENDATIONS[0].dish.nombre, topScore: 99, menuUrl: FALLBACK_RECOMMENDATIONS[0].restaurant.menuUrl },
-      { id: FALLBACK_RECOMMENDATIONS[1].restaurant.id, name: FALLBACK_RECOMMENDATIONS[1].restaurant.name, topDish: FALLBACK_RECOMMENDATIONS[1].dish.nombre, topScore: 97, menuUrl: FALLBACK_RECOMMENDATIONS[1].restaurant.menuUrl }
-    ]);
-  };
-
-  const currentItem = recommendations[selectedIndex] || FALLBACK_RECOMMENDATIONS[0];
+  const currentItem = recommendations[selectedIndex];
   const remainingDishesCount = Math.max(0, recommendations.length - (selectedIndex + 1));
 
   // Pasar al siguiente platillo (Acción del botón 👎 / X o Swipe Left)
@@ -239,44 +139,16 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#FAF6F3] dark:bg-[#0f0f10] text-[#1a1a1a] dark:text-[#f5f5f7] flex flex-col items-center justify-center p-6 font-['Plus_Jakarta_Sans',sans-serif]">
-        <div className="text-center space-y-4">
-          <div className="w-14 h-14 border-4 border-[#ff6b35] border-t-transparent rounded-full animate-spin mx-auto" />
-          <h2 className="text-2xl font-black">Analizando tus preferencias...</h2>
-          <p className="text-sm text-[#737373]">
-            Buscando los mejores platillos en nuestros restaurantes 🤖✨
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!loading && recommendations.length === 0) {
-    return (
-      <div className="min-h-screen bg-[#FAF6F3] dark:bg-[#0f0f10] text-[#1a1a1a] dark:text-[#f5f5f7] flex flex-col items-center justify-center p-6 font-['Plus_Jakarta_Sans',sans-serif]">
-        <div className="text-center space-y-5 max-w-md bg-white dark:bg-[#18181a] p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-xl">
-          <div className="w-16 h-16 bg-[#ff6b35]/10 text-[#ff6b35] rounded-full flex items-center justify-center mx-auto text-3xl">
-            🌮
-          </div>
-          <h2 className="text-2xl font-black">No encontramos coincidencias</h2>
-          <p className="text-sm text-[#737373] leading-relaxed">
-            No tenemos registrados platillos que coincidan con tu búsqueda en este momento. ¡Prueba buscando otro antojo como tacos, pizza o hamburguesas!
-          </p>
-          <button
-            onClick={onRefine || (() => navigate('/cuestionario'))}
-            className="w-full py-3.5 px-6 rounded-2xl bg-[#ff6b35] hover:bg-[#e05a2b] text-white font-bold transition shadow-lg shadow-[#ff6b35]/25 flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-5 h-5" />
-            <span>Probar otro antojo</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const upcomingDishes = recommendations.filter((_, idx) => idx !== selectedIndex);
+  if (loading) return <main className="p-8" aria-busy="true" role="status">Buscando recomendaciones…</main>;
+  if (!currentItem) return <main className="max-w-2xl mx-auto p-6 space-y-4">
+    <h1 className="text-2xl font-bold">{errorMessage ? 'No pudimos completar la búsqueda' : 'Sin resultados verificables'}</h1>
+    <p role={errorMessage ? 'alert' : 'status'}>{errorMessage || 'No encontramos platillos cuya compatibilidad podamos verificar para esta solicitud.'}</p>
+    <p>{safetyMessage}</p>
+    <button type="button" className="p-3 border rounded-lg focus-visible:ring-2" onClick={() => fetchRecommendations()}>Reintentar</button>
+    <button type="button" className="p-3 border rounded-lg focus-visible:ring-2" onClick={onRefine || (() => navigate('/cuestionario'))}>Cambiar solicitud</button>
+  </main>;
+
 
   return (
     <div
@@ -342,6 +214,8 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
             </h1>
             <p className="text-[15px] font-medium text-[#6b7280] dark:text-[#a3a3a3] leading-[1.6] mt-3">
               {currentItem.dish.descripcion}
+              <span className="block mt-3 text-sm">{currentItem.safety.disclaimer}</span>
+              <span className="block text-sm">{currentItem.reasons.join(" · ")}</span>
             </p>
           </div>
 
@@ -362,7 +236,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
 
             <div className="flex items-center gap-3 text-[22px] font-black text-[#ff6b35]">
               <span className="w-7 h-7 rounded-full bg-[#FFF0E6] dark:bg-amber-950/40 text-amber-600 flex items-center justify-center text-xs">💰</span>
-              <span>${currentItem.dish.precio} <span className="text-xs font-bold text-[#9ca3af]">MXN</span></span>
+              <span>Precio declarado: {currentItem.dish.precio ?? 'No declarado'} <span className="text-xs font-bold text-[#9ca3af]">precio declarado</span></span>
             </div>
           </div>
 
@@ -421,7 +295,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
               {/* Card Image Header with Orange Diffused Vignette & Overlays */}
               <div className="relative h-64 sm:h-72 w-full overflow-hidden bg-gradient-to-br from-[#FFE8DD] via-[#FDF0E9] to-[#FDE8DF] dark:from-gray-900 dark:to-black">
                 <img
-                  src={currentItem.dish.url_imagen || 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?auto=format&fit=crop&w=800&q=80'}
+                  src={currentItem.dish.url_imagen}
                   alt={currentItem.dish.nombre}
                   className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal opacity-95 pointer-events-none"
                 />
@@ -439,7 +313,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
                     className="px-3.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[12px] font-bold flex items-center gap-1.5 border border-white/20"
                   >
                     <span className="w-2 h-2 rounded-full bg-[#ff6b35]" />
-                    <span>{currentItem.matchPercentage}% match</span>
+                    <span>Orden sugerido match</span>
                   </span>
                 </div>
 
@@ -470,7 +344,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
                     ))}
                   </div>
                   <div className="text-[20px] font-black text-[#ff6b35]">
-                    ${currentItem.dish.precio}
+                    Precio declarado: {currentItem.dish.precio ?? 'No declarado'}
                   </div>
                 </div>
 
@@ -564,7 +438,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
                       </p>
                     </div>
                     <span className="text-[13px] font-black text-[#ff6b35] flex-shrink-0">
-                      {item.matchPercentage}%
+                      Sugerencia
                     </span>
                   </div>
                 );
@@ -632,13 +506,13 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
                     <div>
                       <h4 className="font-extrabold text-base">{rest.name}</h4>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Platillo sugerido: <span className="font-bold text-[#ff6b35]">{rest.topDish}</span> ({rest.topScore}% match)
+                        Platillo sugerido: <span className="font-bold text-[#ff6b35]">{rest.topDish}</span> 
                       </p>
                     </div>
                     <button
                       type="button"
                       data-testid="open-restaurant-menu"
-                      onClick={() => handleOpenRestaurantFromDrawer(rest.menuUrl)}
+                      onClick={() => handleOpenRestaurantFromDrawer(rest.menuUrl || '')}
                       className="py-2 px-4 rounded-xl bg-[#ff6b35] text-white text-xs font-bold hover:bg-[#e05624] transition flex items-center gap-1.5 flex-shrink-0 shadow-sm"
                     >
                       <span>Ver menú</span>

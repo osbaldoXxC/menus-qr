@@ -565,6 +565,126 @@
           "longitud_maxima": 50
         },
         {
+          "nombre": "ingredientes_secundarios",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "salsas",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "aderezos",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "condimentos",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "ingredientes_compuestos",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "sustituciones_permitidas",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "modificadores_opcionales",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "alergenos_declarados",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "nombre": "contacto_cruzado",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "verification_metadata",
+          "tipo": "jsonb",
+          "nulable": false,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "nombre": "verification_state",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": "'declared_unverified'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "completeness_state",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": "'incomplete'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "cross_contamination_state",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": "'not_assessed'::character varying",
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "verified_recipe_version",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 128
+        },
+        {
+          "nombre": "current_recipe_version",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 128
+        },
+        {
+          "nombre": "verified_by",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "verified_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "verification_source",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "verification_updated_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": null
+        },
+        {
           "nombre": "created_at",
           "tipo": "timestamp with time zone",
           "nulable": true,
@@ -1287,6 +1407,247 @@
           "nulable": true,
           "default": null,
           "longitud_maxima": 45
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "alergenos_canonicos",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [
+        {
+          "restriccion": "alergenos_canonicos_nombre_canonico_key",
+          "columna": "nombre_canonico"
+        }
+      ],
+      "llaves_foraneas": [],
+      "indices": [],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 64
+        },
+        {
+          "nombre": "nombre_canonico",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 120
+        },
+        {
+          "nombre": "descripcion",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "fuente",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "nivel_verificacion",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "activo",
+          "tipo": "boolean",
+          "nulable": false,
+          "default": "true"
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "nombre": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "alergeno_terminos",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [
+        {
+          "restriccion": "alergeno_terminos_alergeno_id_termino_normalizado_tipo_key",
+          "columnas": [
+            "alergeno_id",
+            "termino_normalizado",
+            "tipo"
+          ]
+        }
+      ],
+      "llaves_foraneas": [
+        {
+          "columna": "alergeno_id",
+          "referencia_tabla": "alergenos_canonicos",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [
+        {
+          "nombre": "idx_alergeno_terminos_termino",
+          "definicion": "CREATE INDEX idx_alergeno_terminos_termino ON public.alergeno_terminos USING btree (termino_normalizado)"
+        },
+        {
+          "nombre": "idx_alergeno_terminos_alergeno",
+          "definicion": "CREATE INDEX idx_alergeno_terminos_alergeno ON public.alergeno_terminos USING btree (alergeno_id)"
+        }
+      ],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "alergeno_id",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 64
+        },
+        {
+          "nombre": "termino_normalizado",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "tipo",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "fuente",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 255
+        },
+        {
+          "nombre": "nivel_verificacion",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulable": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ]
+    },
+    {
+      "esquema": "public",
+      "nombre": "platillo_verificacion_auditoria",
+      "clave_primaria": [
+        "id"
+      ],
+      "unicos": [],
+      "llaves_foraneas": [
+        {
+          "columna": "platillo_id",
+          "referencia_tabla": "platillos",
+          "referencia_columna": "id"
+        }
+      ],
+      "indices": [
+        {
+          "nombre": "idx_platillo_verif_aud_platillo",
+          "definicion": "CREATE INDEX idx_platillo_verif_aud_platillo ON public.platillo_verificacion_auditoria USING btree (platillo_id)"
+        },
+        {
+          "nombre": "idx_platillo_verif_aud_restaurante",
+          "definicion": "CREATE INDEX idx_platillo_verif_aud_restaurante ON public.platillo_verificacion_auditoria USING btree (restaurante_id)"
+        }
+      ],
+      "columnas": [
+        {
+          "nombre": "id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": "gen_random_uuid()"
+        },
+        {
+          "nombre": "platillo_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "restaurante_id",
+          "tipo": "uuid",
+          "nulable": false,
+          "default": null
+        },
+        {
+          "nombre": "accion",
+          "tipo": "character varying",
+          "nulable": false,
+          "default": null,
+          "longitud_maxima": 100
+        },
+        {
+          "nombre": "estado_anterior",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "estado_nuevo",
+          "tipo": "jsonb",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "actor_id",
+          "tipo": "uuid",
+          "nulable": true,
+          "default": null
+        },
+        {
+          "nombre": "actor_rol",
+          "tipo": "character varying",
+          "nulable": true,
+          "default": null,
+          "longitud_maxima": 50
+        },
+        {
+          "nombre": "motivo",
+          "tipo": "text",
+          "nulable": true,
+          "default": null
         },
         {
           "nombre": "created_at",

@@ -37,15 +37,19 @@ services:
       - "${PORT:-4000}:4000"
     volumes:
       - ./backend:/app
+      - ./shared:/app/shared:ro
       - /app/node_modules
     env_file:
       - .env
     environment:
+      - NODE_ENV=development
+      - LOCAL_MXN_BUDGET=true
+      - DISABLE_STARTUP_DDL=true
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
-      - ML_SERVICE_URL=${ML_SERVICE_URL:-http://ml-service:8000}
+      - ML_SERVICE_URL=http://ml-service:8000
       - PUBLIC_MENU_URL=http://localhost:3000/menu
       - FRONTEND_URL=http://localhost:3000
     networks:
@@ -56,6 +60,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health',r=>process.exit(r.statusCode===200?0:1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   ml-service:
     build: ./ml-service
@@ -63,11 +75,18 @@ services:
       - "8000:8000"
     volumes:
       - ./ml-service:/app
+      - ./shared:/app/shared:ro
     environment:
       - PORT=8000
     networks:
       - public-net
       - private-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend-comensales:
     build:

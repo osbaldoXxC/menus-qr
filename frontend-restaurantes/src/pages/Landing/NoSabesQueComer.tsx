@@ -51,7 +51,7 @@ export function NoSabesQueComer() {
           <nav className="hidden md:flex items-center gap-1">
             {[
               { label: 'Descubrir', to: '/descubrir' },
-              { label: 'Cuestionario IA', to: '/cuestionario' },
+              { label: 'Buscar platillos', to: '/cuestionario' },
               { label: 'Para Restaurantes', to: '/para-restaurantes' },
             ].map((item) => (
               <Link key={item.to} to={item.to} className="px-4 py-2 text-[13px] font-medium text-[#86868B] dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7] rounded-lg transition-colors duration-200">

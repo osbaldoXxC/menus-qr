@@ -8,7 +8,8 @@ export interface CuestionarioState {
   cravingTags: string[];
   diet: string;
   allergies: string[];
-  socialContext: string;
+  budgetMax?: number;
+  excludedIngredients?: string[];
 }
 
 interface CuestionarioWizardProps {
@@ -30,8 +31,6 @@ const DIET_OPTIONS = [
   { id: 'none', label: '🍽️ Sin restricciones', desc: 'Como de todo' },
   { id: 'vegetariana', label: '🥬 Vegetariana', desc: 'Sin carne' },
   { id: 'vegana', label: '🌱 Vegana', desc: 'Sin productos animales' },
-  { id: 'sin_gluten', label: '🌾 Sin gluten', desc: 'Libre de trigo/gluten' },
-  { id: 'keto', label: '🥑 Keto', desc: 'Baja en carbohidratos' }
 ];
 
 const ALLERGY_OPTIONS = [
@@ -45,12 +44,6 @@ const ALLERGY_OPTIONS = [
   { id: 'mariscos', label: '🦀 Mariscos' }
 ];
 
-const SOCIAL_OPTIONS = [
-  { id: 'solo', label: '🧑 Solo', desc: 'Comida personal' },
-  { id: 'pareja', label: '💑 En pareja', desc: 'Ocasión especial' },
-  { id: 'familia', label: '👨‍👩‍👧‍👦 Familia', desc: 'Platillos para compartir' },
-  { id: 'amigos', label: '🎉 Con amigos', desc: 'Ambiente festivo' }
-];
 
 export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
   initialState,
@@ -58,6 +51,9 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
   onCancel
 }) => {
   const navigate = useNavigate();
+  const [budget, setBudget] = useState(initialState?.budgetMax?.toString() || '');
+  const [exclusions, setExclusions] = useState(initialState?.excludedIngredients?.join(', ') || '');
+  const [formError, setFormError] = useState('');
   const [step, setStep] = useState<number>(1);
   const [direction, setDirection] = useState<number>(1);
 
@@ -65,7 +61,6 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>(initialState?.cravingTags || []);
   const [selectedDiet, setSelectedDiet] = useState<string>(initialState?.diet || 'none');
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>(initialState?.allergies || []);
-  const [selectedSocial, setSelectedSocial] = useState<string>(initialState?.socialContext || 'solo');
 
   useEffect(() => {
     // Cargar del localStorage si existe previa sesión
@@ -77,7 +72,8 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
         if (parsed.cravingTags) setSelectedTags(parsed.cravingTags);
         if (parsed.diet) setSelectedDiet(parsed.diet);
         if (parsed.allergies) setSelectedAllergies(parsed.allergies);
-        if (parsed.socialContext) setSelectedSocial(parsed.socialContext);
+        if (parsed.budgetMax !== undefined) setBudget(String(parsed.budgetMax));
+        if (Array.isArray(parsed.excludedIngredients)) setExclusions(parsed.excludedIngredients.join(', '));
       } catch (e) {
         console.warn('Error al restaurar estado de cuestionario:', e);
       }
@@ -99,24 +95,29 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
   const handleNext = () => {
     if (step < 5) {
       setDirection(1);
-      setStep(step + 1);
+      setStep(step === 3 ? 5 : step + 1);
     }
   };
 
   const handlePrev = () => {
     if (step > 1) {
       setDirection(-1);
-      setStep(step - 1);
+      setStep(step === 5 ? 3 : step - 1);
     }
   };
 
   const handleFinish = () => {
+    if (budget && (!/^\d+(\.\d{1,2})?$/.test(budget) || Number(budget) <= 0 || Number(budget) > 100000)) {
+      setFormError('Indica un máximo entre 0.01 y 100000 MXN, con hasta dos decimales.'); return;
+    }
+    setFormError('');
     const finalState: CuestionarioState = {
       cravingText: cravingText.trim(),
       cravingTags: selectedTags,
       diet: selectedDiet,
       allergies: selectedAllergies,
-      socialContext: selectedSocial
+      budgetMax: budget === '' ? undefined : Number(budget),
+      excludedIngredients: exclusions.split(',').map(v => v.trim()).filter(Boolean)
     };
 
     localStorage.setItem('mexxicanmx_cuestionario_state', JSON.stringify(finalState));
@@ -128,7 +129,7 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
     }
   };
 
-  const progressPercentage = (step / 5) * 100;
+  const progressPercentage = ((step === 5 ? 4 : step) / 4) * 100;
 
   return (
     <div
@@ -185,7 +186,8 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
                 </div>
 
                 <div className="mt-4">
-                  <textarea
+                  <label htmlFor="craving-text" className="block font-semibold">Tu antojo (opcional)</label>
+                  <textarea id="craving-text"
                     data-testid="craving-input"
                     value={cravingText}
                     onChange={e => setCravingText(e.target.value)}
@@ -222,6 +224,16 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
                   </div>
                 </div>
 
+                <details className="space-y-3"><summary className="cursor-pointer focus-visible:ring-2">Presupuesto y exclusiones (opcionales)</summary>
+                  <label className="block">Máximo por platillo en MXN
+                    <input type="number" min="0.01" max="100000" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} className="block w-full p-3 border rounded-lg bg-transparent focus-visible:ring-2" />
+                  </label>
+                  <label className="block">Ingredientes excluidos, separados por coma
+                    <input value={exclusions} onChange={e => setExclusions(e.target.value)} className="block w-full p-3 border rounded-lg bg-transparent focus-visible:ring-2" />
+                  </label>
+                </details>
+                {formError && <p role="alert">{formError}</p>}
+                <button type="button" onClick={handleFinish} className="w-full py-3 bg-orange-700 text-white rounded-lg focus-visible:ring-2">Recomendar con esta solicitud</button>
                 {/* Actions */}
                 <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
                   <button
@@ -236,7 +248,7 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
                     onClick={handleNext}
                     className="flex-1 py-3.5 px-6 rounded-[12px] bg-[#ff6b35] text-white font-extrabold text-sm shadow-md shadow-[#ff6b35]/25 hover:bg-[#e05624] transition text-center flex items-center justify-center gap-2"
                   >
-                    <span>Continuar</span>
+                    <span>Agregar dieta o alergias</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -382,70 +394,6 @@ export const CuestionarioWizard: React.FC<CuestionarioWizardProps> = ({
             )}
 
             {/* STEP 4: CON QUIÉN COMES */}
-            {step === 4 && (
-              <motion.div
-                key="step4"
-                initial={{ opacity: 0, x: direction * 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -direction * 30 }}
-                transition={{ duration: 0.25 }}
-                className="space-y-6"
-              >
-                <div className="text-center">
-                  <span className="text-5xl mb-3 block">🎯</span>
-                  <h1 className="text-2xl md:text-3xl font-black text-[#141d23]">
-                    ¿Con quién comes?
-                  </h1>
-                  <p className="text-sm font-medium text-[#6b7280] mt-2">
-                    Así ajustamos las recomendaciones a la ocasión
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {SOCIAL_OPTIONS.map(opt => {
-                    const isSelected = selectedSocial === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        data-testid="social-context-option"
-                        onClick={() => setSelectedSocial(opt.id)}
-                        className={`p-4 rounded-[16px] border text-center transition-all ${
-                          isSelected
-                            ? 'bg-[#ff6b35]/10 border-2 border-[#ff6b35] text-[#141d23] shadow-sm font-bold'
-                            : 'bg-white border-gray-200 text-[#4b5563] hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="text-xl font-bold">{opt.label}</div>
-                        <div className="text-xs text-[#6b7280] mt-1">{opt.desc}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={handlePrev}
-                    className="flex-1 py-3 px-5 rounded-[12px] bg-transparent border border-gray-300 font-bold text-sm text-[#4b5563] hover:bg-gray-100 transition flex items-center justify-center gap-2"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Atrás</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className="flex-1 py-3.5 px-6 rounded-[12px] bg-[#ff6b35] text-white font-extrabold text-sm shadow-md shadow-[#ff6b35]/25 hover:bg-[#e05624] transition flex items-center justify-center gap-2"
-                  >
-                    <span>Continuar</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 5: READY / PRE-FETCH */}
             {step === 5 && (
               <motion.div
                 key="step5"
