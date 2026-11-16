@@ -29,7 +29,7 @@ jobs:
         working-directory: backend
         env:
           NODE_ENV: test
-        run: npm test
+        run: node --test tests/unit/*.test.js
 
   frontends-build:
     name: Frontends - Verificación y Compilación
