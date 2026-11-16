@@ -310,7 +310,7 @@ jobs:
         working-directory: frontend-comensales
         run: |
           npm run dev -- --host 127.0.0.1 --port 43010 --strictPort > "$RUNNER_TEMP/vite-ci.log" 2>&1 &
-          for attempt in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:43010/ > /dev/null; then exit 0; fi
             sleep 1
           done
