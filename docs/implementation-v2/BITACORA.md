@@ -400,3 +400,259 @@ No se modificaron decisiones pendientes ni se inventaron valores/contratos.
 - `No más de cien pesos`, `Traigo 80 varos` y `No quiero gastar más de 100 varos` se corroboran solo en formulaciones acotadas; se exige evidencia MXN. Aproximaciones no se convierten en máximos. Cantidades compuestas no soportadas y presupuestos explícitos contradictorios quedan bloqueados cuando no pueden comprobarse. `sin picante` y `no pique` usan únicamente el nivel declarado 0; ingredientes, alergias y trazas mantienen las reglas R3.
 - Pruebas: 112 Node, 97 ML (incluye 15 frases representativas en subpruebas) y una integración HTTP real con PostgreSQL/ML/Node aislados PASS. En el mismo catálogo: «un pollito» pasó de cinco opciones mezcladas a un pollo; «camaronsitos» recuperó cinco camarones. Presupuesto escrito: sin evidencia, cero resultados; con evidencia sintética MXN, cuatro candidatos <=100. Se comprobó presupuesto aproximado sin filtro, negaciones, excepción pescado y ambos endpoints para leche. Los hashes normalizados del registro y módulo temporal coincidieron con workspace. Análisis local: ~0.385 ms por frase en una muestra de 1000; no es prueba de rendimiento integral.
 - Archivos: `shared/mexican-spanish-v1.json`, `backend/src/services/{linguisticVocabulary.js,primaryFoodRelevance.js,restrictionConsolidation.js}`, `backend/src/controllers/menuController.js`, `ml-service/{linguistic.py,main.py}`, `backend/tests/unit/{primaryFoodRelevance.test.js,dec012Contract.test.js,dec002Budget.test.js}`, `ml-service/tests/test_mexican_language.py`, `backend/tests/integration/r3-isolated/{compose.yaml,mexican-language-http.test.cjs}`, `compose.yml` y esta bitácora. No se instaló nada ni se tocó la base persistente. `localhost:3000` no ejecuta este corte: los nuevos montajes requieren recrear servicios y el backend aún ejecuta `runMigrations()` al arrancar fuera de test; no se reinició.
+
+## [2026-11-17 21:12 -06:00] ISSUE #42 — [R2/R5][QA] Auditar ML V2 con 30 frases reales, documentar causas y bloqueos
+
+- **Implementó / auditó:** @Felixgarciaf
+- **Rol en esta actividad:** auditor / ejecutor / verificador QA.
+- **Issue / rama / commit:** https://github.com/osbaldoXxC/menus-qr/issues/42 / `feature/issue-42-felix-auditoria-ml` / base `4f6df83f5563c51b4168b945895ac9e3dbd32e15`.
+- **Objetivo y alcance:** Reproducir y auditar la batería de 30 frases reales sobre el recomendador ML V2 + Backend V2 trazando las 8 capas (`entrada -> normalización -> /interpret -> consolidación -> recuperación -> elegibilidad -> /rank -> fallback -> respuesta final`), medir rendimiento (`p50`/`p95`) y documentar causas raíz y bloqueos sin alterar código funcional.
+- **Qué código o documento se inspeccionó:** `.agents/AGENTS.md`, `.agents/skills/{scope-guard,feature-audit,security-audit,code-quality,performance-optimization,test-selection}/SKILL.md`, `docs/asignaciones/felix-g/{ISSUE-01-ML-30-FRASES.md,TEC-01-AUDITORIA-ML.md,BITACORA-PLANTILLA-FELIX_G.md}`, `shared/mexican-spanish-v1.json`, `ml-service/{linguistic.py,main.py}`, `ml-service/tests/test_mexican_language.py`, `backend/src/validators/recommendationRequest.js`, `backend/src/services/{linguisticVocabulary.js,restrictionConsolidation.js,primaryFoodRelevance.js,eligibilityService.js,catalogVerification.js,catalogEvidence.js}`, `backend/src/controllers/menuController.js`, `backend/src/config/db.js` y `backend/tests/integration/r3-isolated/*.cjs`.
+- **Qué se cambió realmente:** `SIN CAMBIOS FUNCIONALES`. Únicamente se crearon los entregables de evidencia `docs/evidencias/ml-v2-30-frases-felix-g.json` y `docs/evidencias/ml-v2-30-frases-felix-g.md`, y se registró esta entrada en `docs/implementation-v2/BITACORA.md`.
+- **Entorno:** Host Windows (`c:\Users\felix\Desktop\integradora-menu`), zona horaria `America/Mexico_City`, Node.js `v24.22.1` + Python `3.13.7` (`NODE_ENV=test`, `DISABLE_STARTUP_DDL=true`), vocabulario `shared/mexican-spanish-v1.json` (`1.0.0-draft`, 75 conceptos / 350 formas), dataset fijo `synthetic_demo_v1` (`backend/tests/integration/r3-isolated/demo-catalog.cjs`: 15 restaurantes DEMO, 120 platillos activos sin certificaciones R3 ni moneda MXN confirmada). Sin exposición ni registro de secretos de `.env`.
+- **Pruebas ejecutadas:**
+  1. Suite unitaria aislada de relevancia y verificación: `node --test backend/tests/unit/primaryFoodRelevance.test.js backend/tests/unit/catalogVerification.test.js` -> **21 PASS / 0 FAIL** (`276.3 ms`).
+  2. Verificación del analizador lingüístico mexicano: `python -c "import linguistic..."` -> **PASS** (`version: 1.0.0-draft`, `75 conceptos`).
+  3. Ejecución reproducible de las 25 frases literales disponibles en el repositorio a través de las capas reales (`linguistic.py` + `interpret` + `consolidateRestrictions` + `evaluateEligibility` + `selectRelevantFood` + `filterNoSpice` + `rank`) sobre el catálogo fijo de 120 platillos: **25 ejecutadas / 5 bloqueadas por archivo fuente ausente**. Duración por caso: `min = 1.621 ms`, **`p50 = 2.202 ms`**, **`p95 = 28.456 ms`**, `max = 31.894 ms`.
+- **Resultados observados:** De las 30 posiciones de la matriz: **5 `PASS`** (casos 1, 4, 16, 18, 20), **10 `NO-VERIFICABLE`** (abstención segura *fail-closed* en casos 7, 8, 10, 11, 17, 19, 22, 23, 24, 25 por falta de evidencia MXN `DEC-002` o ausencia certificada `R3`), **9 `FAIL-RELEVANCIA`** (casos 2, 3, 5, 6, 9, 13, 14, 15, 21: destacando `[ML-30-C14]` donde «Un postrecito frío» devuelve 0 candidatos porque `dishMatchesFamily()` en `primaryFoodRelevance.js:52` no evalúa `dish.categoria_nombre`, y `[ML-30-C21]` donde «Quiero una tortita» deja `constrained: false` y rellena con 5 platillos ajenos), **1 `FAIL-SEGURIDAD` histórico documentado** (`[ML-30-C12]` «No lleve leche»: en contenedor previo sin reiniciar recomendó licuado con leche; en el código actual `4f6df83` bloquea de forma segura por doble guardia `parse_negations` + `hasOmittedTextExclusion`), y **5 `BLOQUEADO`** (casos 26 al 30 por no haberse subido `docs/evidencias/demo-local-30-consultas.json` al repositorio). En auditoría de rendimiento se detectó que `getGlobalRecommendations` y `getPublicRecommendations` ejecutan `enrichCandidates()` dos veces por petición (`menuController.js:1200/1265` y `1330/1374`).
+- **Riesgos de seguridad:** (1) Si los contenedores principales (`backend` y `ml-service`) no se recargan con el código `4f6df83` y `DISABLE_STARTUP_DDL=true`, persiste en memoria el riesgo crítico de omisión de exclusiones como «no lleve leche»; (2) `backend/src/config/db.js:184-186` ejecuta `runMigrations()` automáticamente al arrancar si `NODE_ENV !== 'test'` y `DISABLE_STARTUP_DDL` no está activo.
+- **Limitaciones y pendientes:** Las filas 26 a 30 permanecen en estado `BLOQUEADO` (sin inventar frases) en espera de que se incorpore al repositorio el archivo `docs/evidencias/demo-local-30-consultas.json`.
+- **Estado:** PARCIAL (25/30 casos ejecutados y diagnosticados con traza completa; 5/30 documentados en bloqueo por archivo fuente no versionado en `4f6df83`).
+- **Próxima acción autorizada:** Recibir `docs/evidencias/demo-local-30-consultas.json` para completar las 5 filas bloqueadas y esperar autorización en un issue separado antes de implementar correcciones en `primaryFoodRelevance.js` y `menuController.js`.
+
+### Bloqueo detectado (crear entrada en cuanto aparezca)
+
+- **Fecha/hora:** `2026-11-17T21:12:00-06:00` (`America/Mexico_City`)
+- **Reportado por:** @Felixgarciaf
+- **Severidad:** ALTA
+- **Requisito que bloquea:** Criterio de aceptación 1 de `ISSUE-01-ML-30-FRASES.md` (*«El origen de las 30 frases y las respuestas anteriores está en `docs/evidencias/demo-local-30-consultas.json`. No inventar frases faltantes»*).
+- **Síntoma reproducible:** Al clonar `main` en el commit `4f6df83f5563c51b4168b945895ac9e3dbd32e15`, el directorio `docs/evidencias/` y los scripts `backend/tests/integration/demo-local-30-requests.cjs` y `demo-local-catalog.cjs` referenciados en entradas previas de `BITACORA.md` no existen en el árbol Git. Solo 25 de las 30 frases literales figuran en los tests versionados (`ml-service/tests/test_mexican_language.py` y `backend/tests/integration/r3-isolated/*.cjs`).
+- **Evidencia de logs/archivos:** Casos `26` a `30` (`audit-felix-c26` a `audit-felix-c30`) en [`docs/evidencias/ml-v2-30-frases-felix-g.json`](../evidencias/ml-v2-30-frases-felix-g.json) y sección `[ML-30-C26 a C30]` en [`docs/evidencias/ml-v2-30-frases-felix-g.md`](../evidencias/ml-v2-30-frases-felix-g.md).
+- **Riesgo de continuar:** Completar las 5 frases faltantes por inferencia o invención violaría expresamente la prohibición de `ISSUE-01-ML-30-FRASES.md` y contaminaría la comparativa reproducible.
+- **Operación detenida:** Ejecución de las 5 frases faltantes (`caseId` 26–30) y comparación contra los cuerpos HTTP históricos de `demo-local-30-consultas.json`.
+- **Tareas independientes que sí pueden continuar:** Auditoría completa por capa de las 25 frases literales verificables en el repositorio, medición de latencias `p50`/`p95`, identificación de defectos de relevancia/rendimiento y entrega de `docs/evidencias/ml-v2-30-frases-felix-g.{json,md}`.
+- **Notificación:** Comentario publicado en https://github.com/osbaldoXxC/menus-qr/issues/42 con mención a `@osbaldoXxC` (`2026-11-17T21:18:00-06:00`).
+- **Decisión requerida del responsable:** Subir `docs/evidencias/demo-local-30-consultas.json` al repositorio o autorizar el cierre de la auditoría con los 25 casos trazados y los 5 bloqueos documentados.
+- **Estado:** ABIERTO
+
+### Hallazgos individuales por cada FAIL y BLOQUEADO (Criterio de Aceptación #8 — Issue #42)
+
+### [ML-30-C02] FAIL-RELEVANCIA — Preferencia de Picante (Mexicanismo)
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `MEDIA`
+- **Frase literal:** `Algo bien enchiloso`
+- **Comportamiento esperado:** Priorizar platillos con nivel_picante > 0 declarados en catálogo
+- **Comportamiento observado:** HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Camarones con chipotle ($87 MXN, picante=3, score=0.8651), Chilaquiles rojos ($73 MXN, picante=3, score=0.8651), Mole con pollo ($45 MXN, picante=3, score=0.8651)).
+- **`requestId` y endpoint:** `audit-felix-c02` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `Capa 7: primaryFoodRelevance.js + Ranking (/rank)`
+- **Evidencia que lo demuestra:** `Al no mencionarse una familia de alimento primario en 'Algo bien enchiloso' / 'Que pique machín', selectRelevantFood() no filtra por categoría y /rank mezcla platillos con nivel_picante=3 y nivel_picante=0 por similitud TF-IDF/tokens.` ([Registro JSON `caseId=2`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Recomendación irrelevante o falso vacío perceptible por el comensal.
+- **Acción recomendada (sin implementar):** Evitar rellenar con candidatos de nivel_picante=0 cuando el usuario exige explícitamente comida muy picante ('enchiloso'/'que pique machín').
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `DOCUMENTADO`
+
+---
+
+### [ML-30-C03] FAIL-RELEVANCIA — Preferencia de Picante Intenso
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `MEDIA`
+- **Frase literal:** `Que pique machín`
+- **Comportamiento esperado:** Priorizar platillos con mayor nivel_picante declarado
+- **Comportamiento observado:** HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Camarones con chipotle ($87 MXN, picante=3, score=0.8651), Chilaquiles rojos ($73 MXN, picante=3, score=0.8651), Mole con pollo ($45 MXN, picante=3, score=0.8651)).
+- **`requestId` y endpoint:** `audit-felix-c03` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `Capa 7: primaryFoodRelevance.js + Ranking (/rank)`
+- **Evidencia que lo demuestra:** `Al no mencionarse una familia de alimento primario en 'Algo bien enchiloso' / 'Que pique machín', selectRelevantFood() no filtra por categoría y /rank mezcla platillos con nivel_picante=3 y nivel_picante=0 por similitud TF-IDF/tokens.` ([Registro JSON `caseId=3`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Recomendación irrelevante o falso vacío perceptible por el comensal.
+- **Acción recomendada (sin implementar):** Evitar rellenar con candidatos de nivel_picante=0 cuando el usuario exige explícitamente comida muy picante ('enchiloso'/'que pique machín').
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `DOCUMENTADO`
+
+---
+
+### [ML-30-C06] FAIL-RELEVANCIA — Atributo Subjetivo / Porción
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `MEDIA`
+- **Frase literal:** `Algo bien llenador`
+- **Comportamiento esperado:** No inventar evidencia de saciedad; ordenar por similitud léxica sólo sobre elegibles
+- **Comportamiento observado:** HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Arroz a la mexicana ($87 MXN, picante=0, score=0.55), Arroz con camarones ($87 MXN, picante=0, score=0.55), Arroz con champiñones ($80 MXN, picante=0, score=0.55)).
+- **`requestId` y endpoint:** `audit-felix-c06` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `Capa 3/7: /interpret + primaryFoodRelevance.js + /rank`
+- **Evidencia que lo demuestra:** `'Algo bien llenador' extrae el concepto 'llenador' (preference), pero ningún platillo del catálogo declara porción/saciedad verificable y selectRelevantFood() no aplica restricción, por lo que /rank devuelve los primeros 5 platillos con score base 0.55.` ([Registro JSON `caseId=6`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Recomendación irrelevante o falso vacío perceptible por el comensal.
+- **Acción recomendada (sin implementar):** No rellenar hasta limit=5 con score base 0.55 cuando raw_score == 0 o cuando el calificador ('con verduras', 'dulce', 'llenador') no consta en los datos.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `DOCUMENTADO`
+
+---
+
+### [ML-30-C09] FAIL-RELEVANCIA — Presupuesto Ambiguo / Económico
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `MEDIA`
+- **Frase literal:** `Algo bara`
+- **Comportamiento esperado:** Detectar mención económica sin monto numérico (budget.ambiguous=True) sin aplicar tope arbitrario
+- **Comportamiento observado:** HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Arroz a la mexicana ($87 MXN, picante=0, score=0.55), Arroz con camarones ($87 MXN, picante=0, score=0.55), Arroz con champiñones ($80 MXN, picante=0, score=0.55)).
+- **`requestId` y endpoint:** `audit-felix-c09` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `Capa 3/4: _extract_budget_proposal + hasUnresolvedTextBudget`
+- **Evidencia que lo demuestra:** `'Algo bara' activa mentions_money=True por 'bara'/'econ' con budget.ambiguous=True (amount_not_determinable), pero hasUnresolvedTextBudget() sólo bloquea si el texto coincide con el regex de unidades monetarias explícitas (pesos/varos/mxn), dejando pasar 120 candidatos sin filtro de precio.` ([Registro JSON `caseId=9`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Recomendación irrelevante o falso vacío perceptible por el comensal.
+- **Acción recomendada (sin implementar):** Actualizar hasUnresolvedTextBudget() (menuController.js:977) para bloquear cuando extraction.budget.notes incluya 'amount_not_determinable'.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `DOCUMENTADO`
+
+---
+
+### [ML-30-C12] FAIL-SEGURIDAD — Exclusión Crítica de Alérgeno (Lácteos)
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `CRÍTICA`
+- **Frase literal:** `No lleve leche`
+- **Comportamiento esperado:** Extraer 'leche' en excludedIngredients y bloquear cualquier platillo sin ausencia certificada (Caso 20 histórico en BITACORA)
+- **Comportamiento observado:** HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).
+- **`requestId` y endpoint:** `audit-felix-c12` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `Capa 3/4/8: Desfase de contenedor en ejecución (BITACORA Caso 20) vs Código actual (4f6df83)`
+- **Evidencia que lo demuestra:** `HALLAZGO CRÍTICO DOCUMENTADO: En el código actual (4f6df83), parse_negations('No lleve leche') extrae ['leche'] y evaluateEligibility bloquea los 120 candidatos (statusCode='no_verified_results'). Sin embargo, en la corrida previa contra localhost:4000 con contenedor desactualizado (BITACORA 2026-11-15 Caso 20), /interpret devolvió excludedIngredients=[] y recomendó un licuado con leche declarada.` ([Registro JSON `caseId=12`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Riesgo crítico de seguridad alimentaria por alérgeno lácteo si el contenedor no está actualizado.
+- **Acción recomendada (sin implementar):** Recargar contenedores principales con DISABLE_STARTUP_DDL=true para activar la guardia hasOmittedTextExclusion (4f6df83) sin correr migraciones implícitas.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `DOCUMENTADO`
+
+---
+
+### [ML-30-C14] FAIL-RELEVANCIA — Categoría / Temperatura
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `MEDIA`
+- **Frase literal:** `Un postrecito frío`
+- **Comportamiento esperado:** Extraer concepto 'postre' + 'frio'; advertir que primaryFoodRelevance no restringe 'postre' como familia cerrada
+- **Comportamiento observado:** HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).
+- **`requestId` y endpoint:** `audit-felix-c14` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `Capa 7: primaryFoodRelevance.js + /rank`
+- **Evidencia que lo demuestra:** `En 'Un postrecito frío', primaryFoodRelevance filtra por la familia 'postre' si coincide en nombre/ingredientes principales, pero los platillos de la categoría 'Postres' ('Pastel de chocolate', 'Flan de vainilla', etc.) no contienen la palabra 'postre' en su nombre ni en ingredientes_principales, provocando 0 candidatos relevantes (no_relevant_candidates -> no_verified_results) porque dishMatchesFamily() no inspecciona categoria_nombre.` ([Registro JSON `caseId=14`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Recomendación irrelevante o falso vacío perceptible por el comensal.
+- **Acción recomendada (sin implementar):** Incluir dish.categoria_nombre en dishMatchesFamily() (primaryFoodRelevance.js:52) cuando el concepto tenga category === 'food_category'.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `DOCUMENTADO`
+
+---
+
+### [ML-30-C15] FAIL-RELEVANCIA — Preferencia Sensorial con Negación No-Ingrediente
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `MEDIA`
+- **Frase literal:** `Quiero algo dulce, pero no empalagoso`
+- **Comportamiento esperado:** Tratar 'empalagoso' como preferencia/textura pero observar que parse_negations no debe tratar adjetivos subjetivos como alérgenos
+- **Comportamiento observado:** HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Omelette de champiñón ($73 MXN, picante=0, score=0.8597), Arroz con champiñones ($80 MXN, picante=0, score=0.8228), Ensalada de nopales ($45 MXN, picante=0, score=0.8228)).
+- **`requestId` y endpoint:** `audit-felix-c15` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `Capa 3/5: hasOmittedTextExclusion (menuController.js:918) + restrictionConsolidation.js`
+- **Evidencia que lo demuestra:** `En 'Quiero algo dulce, pero no empalagoso', ni 'dulce' ni 'empalagoso' filtran por categoría 'Postres'/'Panadería' en primaryFoodRelevance.js, por lo que /rank devuelve platillos de panadería/postres o generales sin verificar dulzor.` ([Registro JSON `caseId=15`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Recomendación irrelevante o falso vacío perceptible por el comensal.
+- **Acción recomendada (sin implementar):** No rellenar hasta limit=5 con score base 0.55 cuando raw_score == 0 o cuando el calificador ('con verduras', 'dulce', 'llenador') no consta en los datos.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `DOCUMENTADO`
+
+---
+
+### [ML-30-C21] FAIL-RELEVANCIA — Ambigüedad Léxica (Torta vs Tortita)
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `MEDIA`
+- **Frase literal:** `Quiero una tortita`
+- **Comportamiento esperado:** Clasificar 'tortita' como ambiguous_contextual sin asumir equivalencia automática con torta
+- **Comportamiento observado:** HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Sopa de tortilla ($66 MXN, picante=0, score=0.7077), Arroz a la mexicana ($87 MXN, picante=0, score=0.55), Arroz con camarones ($87 MXN, picante=0, score=0.55)).
+- **`requestId` y endpoint:** `audit-felix-c21` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `Capa 2/7: shared/mexican-spanish-v1.json + primaryFoodRelevance.js`
+- **Evidencia que lo demuestra:** `'Quiero una tortita' marca 'tortita' como ambiguous_contextual en linguistic.py (no se incluye en foodFamilies().request de primaryFoodRelevance.js), por lo que selectRelevantFood() no restringe candidatos (constrained=False) y /rank devuelve 5 platillos no relacionados con torta.` ([Registro JSON `caseId=21`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Recomendación irrelevante o falso vacío perceptible por el comensal.
+- **Acción recomendada (sin implementar):** Tratar menciones con role === 'ambiguous' ('tortita') como filtro estricto o abstención segura en vez de dejar constrained=false.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `DOCUMENTADO`
+
+---
+
+### [ML-30-C26] BLOQUEADO — Bloqueo de Evidencia Fuente
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `ALTA`
+- **Frase literal:** `[BLOQUEADO: Frase #26 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]`
+- **Comportamiento esperado:** Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido
+- **Comportamiento observado:** No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).
+- **`requestId` y endpoint:** `audit-felix-c26` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `EVIDENCIA-FUENTE-GIT`
+- **Evidencia que lo demuestra:** `Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible.` ([Registro JSON `caseId=26`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Falta de trazabilidad sobre el caso original por archivo no versionado en Git.
+- **Acción recomendada (sin implementar):** Incorporar al repositorio docs/evidencias/demo-local-30-consultas.json y backend/tests/integration/demo-local-30-requests.cjs para destrabar la frase literal original.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `BLOQUEADO`
+
+---
+
+### [ML-30-C27] BLOQUEADO — Bloqueo de Evidencia Fuente
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `ALTA`
+- **Frase literal:** `[BLOQUEADO: Frase #27 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]`
+- **Comportamiento esperado:** Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido
+- **Comportamiento observado:** No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).
+- **`requestId` y endpoint:** `audit-felix-c27` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `EVIDENCIA-FUENTE-GIT`
+- **Evidencia que lo demuestra:** `Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible.` ([Registro JSON `caseId=27`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Falta de trazabilidad sobre el caso original por archivo no versionado en Git.
+- **Acción recomendada (sin implementar):** Incorporar al repositorio docs/evidencias/demo-local-30-consultas.json y backend/tests/integration/demo-local-30-requests.cjs para destrabar la frase literal original.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `BLOQUEADO`
+
+---
+
+### [ML-30-C28] BLOQUEADO — Bloqueo de Evidencia Fuente
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `ALTA`
+- **Frase literal:** `[BLOQUEADO: Frase #28 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]`
+- **Comportamiento esperado:** Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido
+- **Comportamiento observado:** No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).
+- **`requestId` y endpoint:** `audit-felix-c28` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `EVIDENCIA-FUENTE-GIT`
+- **Evidencia que lo demuestra:** `Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible.` ([Registro JSON `caseId=28`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Falta de trazabilidad sobre el caso original por archivo no versionado en Git.
+- **Acción recomendada (sin implementar):** Incorporar al repositorio docs/evidencias/demo-local-30-consultas.json y backend/tests/integration/demo-local-30-requests.cjs para destrabar la frase literal original.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `BLOQUEADO`
+
+---
+
+### [ML-30-C29] BLOQUEADO — Bloqueo de Evidencia Fuente
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `ALTA`
+- **Frase literal:** `[BLOQUEADO: Frase #29 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]`
+- **Comportamiento esperado:** Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido
+- **Comportamiento observado:** No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).
+- **`requestId` y endpoint:** `audit-felix-c29` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `EVIDENCIA-FUENTE-GIT`
+- **Evidencia que lo demuestra:** `Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible.` ([Registro JSON `caseId=29`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Falta de trazabilidad sobre el caso original por archivo no versionado en Git.
+- **Acción recomendada (sin implementar):** Incorporar al repositorio docs/evidencias/demo-local-30-consultas.json y backend/tests/integration/demo-local-30-requests.cjs para destrabar la frase literal original.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `BLOQUEADO`
+
+---
+
+### [ML-30-C30] BLOQUEADO — Bloqueo de Evidencia Fuente
+- **Fecha/hora (`America/Mexico_City`):** `2026-11-17T21:12:00-06:00`
+- **Autor GitHub:** `@Felixgarciaf`
+- **Severidad:** `ALTA`
+- **Frase literal:** `[BLOQUEADO: Frase #30 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]`
+- **Comportamiento esperado:** Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido
+- **Comportamiento observado:** No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).
+- **`requestId` y endpoint:** `audit-felix-c30` · `POST /api/public/menu/recommendations`
+- **Revisión de código + dataset:** Commit `4f6df83` · Dataset `synthetic_demo_v1` (120 platillos / 15 restaurantes DEMO)
+- **Etapa donde se produce:** `EVIDENCIA-FUENTE-GIT`
+- **Evidencia que lo demuestra:** `Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible.` ([Registro JSON `caseId=30`](../evidencias/ml-v2-30-frases-felix-g.json))
+- **Riesgo:** Falta de trazabilidad sobre el caso original por archivo no versionado en Git.
+- **Acción recomendada (sin implementar):** Incorporar al repositorio docs/evidencias/demo-local-30-consultas.json y backend/tests/integration/demo-local-30-requests.cjs para destrabar la frase literal original.
+- **Bloqueo / @mención / estado:** Reportado a `@osbaldoXxC` en Issue #42 · `BLOQUEADO`
+

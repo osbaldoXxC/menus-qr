@@ -1,0 +1,2551 @@
+{
+  "auditMetadata": {
+    "issue": "#42 — [R2/R5][QA] Auditar ML V2 con 30 frases reales, documentar causas y bloqueos",
+    "auditor": "Felix_G (@Felixgarciaf)",
+    "executedAt": "2026-11-17T21:12:00-06:00",
+    "timezone": "America/Mexico_City",
+    "gitBranch": "feature/issue-42-felix-auditoria-ml",
+    "baseCommitSha": "4f6df83f5563c51b4168b945895ac9e3dbd32e15",
+    "vocabularyVersion": "1.0.0-draft",
+    "dataset": {
+      "id": "synthetic_demo_v1 (backend/tests/integration/r3-isolated/demo-catalog.cjs)",
+      "restaurants": 15,
+      "dishes": 120,
+      "certifiedCurrencyEvidence": false,
+      "certifiedAbsenceEvidence": false,
+      "localMxnBudgetFlag": false
+    },
+    "blockerSummary": {
+      "status": "PARCIALMENTE_BLOQUEADO",
+      "missingArtifact": "docs/evidencias/demo-local-30-consultas.json",
+      "verifiedCasesFromRepo": 25,
+      "blockedMissingSourceCases": 5,
+      "policyApplied": "No se inventaron frases faltantes conforme a ISSUE-01-ML-30-FRASES.md y TEC-01-AUDITORIA-ML.md."
+    },
+    "performanceMetricsMs": {
+      "sampleSize": 25,
+      "minMs": 0.452,
+      "p50Ms": 2.202,
+      "p95Ms": 28.456,
+      "maxMs": 31.073,
+      "meanMs": 9.385
+    }
+  },
+  "cases": [
+    {
+      "caseId": 1,
+      "phrase": "Quiero unos camaronsitos",
+      "category": "Morfología / Diminutivo + Errata",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:20",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c01",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "camaronsitos",
+          "camaron"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "camaronsitos",
+          "camaron"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "camaron",
+          "category": "food",
+          "form": "camaronsitos",
+          "relation": "typo_contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            12,
+            24
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": true,
+        "relevanceFamilies": [
+          "camaron"
+        ]
+      },
+      "candidateCount": 120,
+      "eligibleCount": 12,
+      "finalDishIds": [
+        "43e191c3-e4f4-47a6-a4e0-940e1213d1d5",
+        "f0a5af44-6175-486c-af25-e1760f75e782",
+        "4b423b53-d850-42ea-a2f8-78980f84ebad",
+        "2f195195-ec34-4d1c-ae19-75915a5d7dc8",
+        "80ad9937-f245-42c2-acaa-cf993ba4a0b4"
+      ],
+      "finalDishSummaries": [
+        "Arroz con camarones ($87 MXN, picante=0, score=0.8721)",
+        "Camarones a la plancha ($59 MXN, picante=0, score=0.8721)",
+        "Camarones al ajo ($45 MXN, picante=0, score=0.8721)",
+        "Camarones al limón ($52 MXN, picante=0, score=0.8721)",
+        "Camarones con arroz ($66 MXN, picante=0, score=0.8721)"
+      ],
+      "elapsedMs": 8.87,
+      "stageLatenciesMs": {
+        "interpretMs": 2.653,
+        "backendConsolidationAndEligibilityMs": 3.927,
+        "rankMs": 2.29
+      },
+      "expectedBehavior": "Recuperar platillos con camarón (normalizar camaronsitos -> camaron)",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=12 -> returned=5 (Arroz con camarones ($87 MXN, picante=0, score=0.8721), Camarones a la plancha ($59 MXN, picante=0, score=0.8721), Camarones al ajo ($45 MXN, picante=0, score=0.8721)).",
+      "evaluation": "PASS",
+      "severity": "BAJA",
+      "suspectedLayer": "NINGUNA (Flujo nominal)",
+      "rootCauseEvidence": "Ejecución determinista verificada en código actual (4f6df83); 5 recomendaciones coherentes."
+    },
+    {
+      "caseId": 2,
+      "phrase": "Algo bien enchiloso",
+      "category": "Preferencia de Picante (Mexicanismo)",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:20",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c02",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "bien",
+          "enchiloso",
+          "picante"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "bien",
+          "enchiloso",
+          "picante"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "intenso",
+          "category": "intensity",
+          "form": "bien",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            5,
+            9
+          ]
+        },
+        {
+          "concept": "picante",
+          "category": "flavor",
+          "form": "enchiloso",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            10,
+            19
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 120,
+      "finalDishIds": [
+        "39dda180-e9df-4033-ae2c-bcf27e22eb9c",
+        "d6ad4a93-bca0-48e9-a494-6e4ed214986b",
+        "abceb7e6-5439-4e1b-a5b6-ceb7fa612161",
+        "4faf4483-6823-4340-a0f7-98d28eda24c0",
+        "db3bb00c-d289-466b-a05d-ce5769cc9432"
+      ],
+      "finalDishSummaries": [
+        "Camarones con chipotle ($87 MXN, picante=3, score=0.8651)",
+        "Chilaquiles rojos ($73 MXN, picante=3, score=0.8651)",
+        "Mole con pollo ($45 MXN, picante=3, score=0.8651)",
+        "Enchiladas verdes ($59 MXN, picante=0, score=0.3391)",
+        "Arroz a la mexicana ($87 MXN, picante=0, score=0.275)"
+      ],
+      "elapsedMs": 28.456,
+      "stageLatenciesMs": {
+        "interpretMs": 0.394,
+        "backendConsolidationAndEligibilityMs": 0.308,
+        "rankMs": 27.754
+      },
+      "expectedBehavior": "Priorizar platillos con nivel_picante > 0 declarados en catálogo",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Camarones con chipotle ($87 MXN, picante=3, score=0.8651), Chilaquiles rojos ($73 MXN, picante=3, score=0.8651), Mole con pollo ($45 MXN, picante=3, score=0.8651)).",
+      "evaluation": "FAIL-RELEVANCIA",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 7: primaryFoodRelevance.js + Ranking (/rank)",
+      "rootCauseEvidence": "Al no mencionarse una familia de alimento primario en 'Algo bien enchiloso' / 'Que pique machín', selectRelevantFood() no filtra por categoría y /rank mezcla platillos con nivel_picante=3 y nivel_picante=0 por similitud TF-IDF/tokens."
+    },
+    {
+      "caseId": 3,
+      "phrase": "Que pique machín",
+      "category": "Preferencia de Picante Intenso",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:21",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c03",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "pique",
+          "machin",
+          "picante"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "pique",
+          "machin",
+          "picante"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "picante",
+          "category": "flavor",
+          "form": "pique machin",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            4,
+            16
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 120,
+      "finalDishIds": [
+        "39dda180-e9df-4033-ae2c-bcf27e22eb9c",
+        "d6ad4a93-bca0-48e9-a494-6e4ed214986b",
+        "abceb7e6-5439-4e1b-a5b6-ceb7fa612161",
+        "a126b8c4-a63d-486f-aa05-3aeb4b2ed3e9",
+        "db3bb00c-d289-466b-a05d-ce5769cc9432"
+      ],
+      "finalDishSummaries": [
+        "Camarones con chipotle ($87 MXN, picante=3, score=0.8651)",
+        "Chilaquiles rojos ($73 MXN, picante=3, score=0.8651)",
+        "Mole con pollo ($45 MXN, picante=3, score=0.8651)",
+        "Panqué de naranja ($87 MXN, picante=0, score=0.3458)",
+        "Arroz a la mexicana ($87 MXN, picante=0, score=0.275)"
+      ],
+      "elapsedMs": 26.618,
+      "stageLatenciesMs": {
+        "interpretMs": 0.356,
+        "backendConsolidationAndEligibilityMs": 0.076,
+        "rankMs": 26.186
+      },
+      "expectedBehavior": "Priorizar platillos con mayor nivel_picante declarado",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Camarones con chipotle ($87 MXN, picante=3, score=0.8651), Chilaquiles rojos ($73 MXN, picante=3, score=0.8651), Mole con pollo ($45 MXN, picante=3, score=0.8651)).",
+      "evaluation": "FAIL-RELEVANCIA",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 7: primaryFoodRelevance.js + Ranking (/rank)",
+      "rootCauseEvidence": "Al no mencionarse una familia de alimento primario en 'Algo bien enchiloso' / 'Que pique machín', selectRelevantFood() no filtra por categoría y /rank mezcla platillos con nivel_picante=3 y nivel_picante=0 por similitud TF-IDF/tokens."
+    },
+    {
+      "caseId": 4,
+      "phrase": "Que no pique nadita",
+      "category": "Restricción de Picante Cero",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:21",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c04",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "no",
+          "pique",
+          "nadita"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "no",
+          "pique",
+          "nadita"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "picante",
+          "category": "flavor",
+          "form": "pique",
+          "relation": "contextual",
+          "role": "excluded",
+          "source": "author_curated",
+          "normalizedSpan": [
+            7,
+            12
+          ]
+        },
+        {
+          "concept": "nada",
+          "category": "intensity",
+          "form": "nadita",
+          "relation": "diminutive",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            13,
+            19
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 117,
+      "finalDishIds": [
+        "b1d3353a-9670-42e2-ae68-11da03737b15",
+        "dfa51fdc-d2df-405a-a614-a6cea993c90c",
+        "1d50a93a-7b54-40cf-a780-b3cc5dcbbb42",
+        "49cb9c2f-6373-4fbb-a26b-14d9fcf96a54",
+        "39d2e31b-08e2-4a24-aff9-8daec90ea3c7"
+      ],
+      "finalDishSummaries": [
+        "Omelette de champiñón ($73 MXN, picante=0, score=0.8597)",
+        "Arroz con champiñones ($80 MXN, picante=0, score=0.8228)",
+        "Ensalada de nopales ($45 MXN, picante=0, score=0.8228)",
+        "Hamburguesa con champiñón ($73 MXN, picante=0, score=0.8228)",
+        "Pizza de champiñón ($52 MXN, picante=0, score=0.8228)"
+      ],
+      "elapsedMs": 22.484,
+      "stageLatenciesMs": {
+        "interpretMs": 0.431,
+        "backendConsolidationAndEligibilityMs": 0.077,
+        "rankMs": 21.976
+      },
+      "expectedBehavior": "Filtrar estrictamente platillos con nivel_picante === 0 (requiresNoSpice)",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=117 -> eligibleForRank=117 -> returned=5 (Omelette de champiñón ($73 MXN, picante=0, score=0.8597), Arroz con champiñones ($80 MXN, picante=0, score=0.8228), Ensalada de nopales ($45 MXN, picante=0, score=0.8228)).",
+      "evaluation": "PASS",
+      "severity": "BAJA",
+      "suspectedLayer": "NINGUNA (Flujo nominal)",
+      "rootCauseEvidence": "Ejecución determinista verificada en código actual (4f6df83); 5 recomendaciones coherentes."
+    },
+    {
+      "caseId": 5,
+      "phrase": "Un caldito",
+      "category": "Morfología / Diminutivo de Platillo",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:22",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c05",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "caldito",
+          "caldo"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "caldito",
+          "caldo"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "caldo",
+          "category": "dish",
+          "form": "caldito",
+          "relation": "diminutive",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            3,
+            10
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": true,
+        "relevanceFamilies": [
+          "caldo"
+        ]
+      },
+      "candidateCount": 120,
+      "eligibleCount": 1,
+      "finalDishIds": [
+        "cbf0b5b7-cc49-4fc0-a458-aeb4cf54bf9e"
+      ],
+      "finalDishSummaries": [
+        "Caldo de pollo ($52 MXN, picante=0, score=0.8557)"
+      ],
+      "elapsedMs": 1.215,
+      "stageLatenciesMs": {
+        "interpretMs": 0.25,
+        "backendConsolidationAndEligibilityMs": 0.83,
+        "rankMs": 0.135
+      },
+      "expectedBehavior": "Priorizar caldos/sopas; evitar rellenar con platillos ajenos si hay restricción",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=1 -> returned=1 (Caldo de pollo ($52 MXN, picante=0, score=0.8557)).",
+      "evaluation": "PASS",
+      "severity": "BAJA",
+      "suspectedLayer": "Capa 7: primaryFoodRelevance.js",
+      "rootCauseEvidence": "primaryFoodRelevance restringe correctamente a la familia 'caldo' y devuelve únicamente 'Caldo de pollo'."
+    },
+    {
+      "caseId": 6,
+      "phrase": "Algo bien llenador",
+      "category": "Atributo Subjetivo / Porción",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:22",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c06",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "bien",
+          "llenador"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "bien",
+          "llenador"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "intenso",
+          "category": "intensity",
+          "form": "bien",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            5,
+            9
+          ]
+        },
+        {
+          "concept": "llenador",
+          "category": "preference",
+          "form": "llenador",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            10,
+            18
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 120,
+      "finalDishIds": [
+        "db3bb00c-d289-466b-a05d-ce5769cc9432",
+        "43e191c3-e4f4-47a6-a4e0-940e1213d1d5",
+        "dfa51fdc-d2df-405a-a614-a6cea993c90c",
+        "aa0ce1bb-4cc5-498b-a4cf-74e5953817d7",
+        "7ac00187-9315-4135-a654-08fb8f80bf07"
+      ],
+      "finalDishSummaries": [
+        "Arroz a la mexicana ($87 MXN, picante=0, score=0.55)",
+        "Arroz con camarones ($87 MXN, picante=0, score=0.55)",
+        "Arroz con champiñones ($80 MXN, picante=0, score=0.55)",
+        "Arroz con huevo ($80 MXN, picante=0, score=0.55)",
+        "Arroz con leche ($59 MXN, picante=0, score=0.55)"
+      ],
+      "elapsedMs": 19.629,
+      "stageLatenciesMs": {
+        "interpretMs": 0.368,
+        "backendConsolidationAndEligibilityMs": 0.041,
+        "rankMs": 19.22
+      },
+      "expectedBehavior": "No inventar evidencia de saciedad; ordenar por similitud léxica sólo sobre elegibles",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Arroz a la mexicana ($87 MXN, picante=0, score=0.55), Arroz con camarones ($87 MXN, picante=0, score=0.55), Arroz con champiñones ($80 MXN, picante=0, score=0.55)).",
+      "evaluation": "FAIL-RELEVANCIA",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 3/7: /interpret + primaryFoodRelevance.js + /rank",
+      "rootCauseEvidence": "'Algo bien llenador' extrae el concepto 'llenador' (preference), pero ningún platillo del catálogo declara porción/saciedad verificable y selectRelevantFood() no aplica restricción, por lo que /rank devuelve los primeros 5 platillos con score base 0.55."
+    },
+    {
+      "caseId": 7,
+      "phrase": "Traigo 80 varos",
+      "category": "Presupuesto Coloquial MXN",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:23",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c07",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "traigo",
+          "80",
+          "varos"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": 80.0,
+          "currency": "MXN",
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.75,
+          "notes": []
+        },
+        "entities": [
+          "traigo",
+          "80",
+          "varos"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "dinero",
+          "category": "money",
+          "form": "varos",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            10,
+            15
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "budget",
+          "value": 80,
+          "origin": "text_corroborated",
+          "state": "desconocido",
+          "reason": "text_budget_corroborated"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 2.202,
+      "stageLatenciesMs": {
+        "interpretMs": 0.532,
+        "backendConsolidationAndEligibilityMs": 1.669,
+        "rankMs": 0.001
+      },
+      "expectedBehavior": "Corroborar presupuesto <= 80 MXN; abstenerse (no_verified_results) si precio no está certificado en MXN",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 6: eligibilityService.js (DEC-002 evaluateBudgetPrice)",
+      "rootCauseEvidence": "Abstención segura (no_verified_results): el presupuesto textual se corrobora en restrictionConsolidation.js, pero en modo estricto (sin LOCAL_MXN_BUDGET ni evidencia de moneda certificada por el restaurante) evaluateBudgetPrice() devuelve estado 'desconocido' (budget_currency_unverified)."
+    },
+    {
+      "caseId": 8,
+      "phrase": "No más de cien pesos",
+      "category": "Presupuesto Escrito MXN",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:23",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c08",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "no",
+          "mas",
+          "cien",
+          "pesos"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": 100.0,
+          "currency": "MXN",
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.75,
+          "notes": []
+        },
+        "entities": [
+          "no",
+          "mas",
+          "cien",
+          "pesos"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "maximo",
+          "category": "budget_operator",
+          "form": "no mas de",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            0,
+            9
+          ]
+        },
+        {
+          "concept": "dinero",
+          "category": "money",
+          "form": "pesos",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            15,
+            20
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "budget",
+          "value": 100,
+          "origin": "text_corroborated",
+          "state": "desconocido",
+          "reason": "text_budget_corroborated"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 1.396,
+      "stageLatenciesMs": {
+        "interpretMs": 0.355,
+        "backendConsolidationAndEligibilityMs": 1.04,
+        "rankMs": 0.001
+      },
+      "expectedBehavior": "Corroborar presupuesto <= 100 MXN; abstenerse si no hay evidencia MXN certificada",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 6: eligibilityService.js (DEC-002 evaluateBudgetPrice)",
+      "rootCauseEvidence": "Abstención segura (no_verified_results): el presupuesto textual se corrobora en restrictionConsolidation.js, pero en modo estricto (sin LOCAL_MXN_BUDGET ni evidencia de moneda certificada por el restaurante) evaluateBudgetPrice() devuelve estado 'desconocido' (budget_currency_unverified)."
+    },
+    {
+      "caseId": 9,
+      "phrase": "Algo bara",
+      "category": "Presupuesto Ambiguo / Económico",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:24",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c09",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "bara",
+          "economico"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "bara",
+          "economico"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "economico",
+          "category": "preference",
+          "form": "bara",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            5,
+            9
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 120,
+      "finalDishIds": [
+        "db3bb00c-d289-466b-a05d-ce5769cc9432",
+        "43e191c3-e4f4-47a6-a4e0-940e1213d1d5",
+        "dfa51fdc-d2df-405a-a614-a6cea993c90c",
+        "aa0ce1bb-4cc5-498b-a4cf-74e5953817d7",
+        "7ac00187-9315-4135-a654-08fb8f80bf07"
+      ],
+      "finalDishSummaries": [
+        "Arroz a la mexicana ($87 MXN, picante=0, score=0.55)",
+        "Arroz con camarones ($87 MXN, picante=0, score=0.55)",
+        "Arroz con champiñones ($80 MXN, picante=0, score=0.55)",
+        "Arroz con huevo ($80 MXN, picante=0, score=0.55)",
+        "Arroz con leche ($59 MXN, picante=0, score=0.55)"
+      ],
+      "elapsedMs": 19.413,
+      "stageLatenciesMs": {
+        "interpretMs": 0.206,
+        "backendConsolidationAndEligibilityMs": 0.113,
+        "rankMs": 19.094
+      },
+      "expectedBehavior": "Detectar mención económica sin monto numérico (budget.ambiguous=True) sin aplicar tope arbitrario",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Arroz a la mexicana ($87 MXN, picante=0, score=0.55), Arroz con camarones ($87 MXN, picante=0, score=0.55), Arroz con champiñones ($80 MXN, picante=0, score=0.55)).",
+      "evaluation": "FAIL-RELEVANCIA",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 3/4: _extract_budget_proposal + hasUnresolvedTextBudget",
+      "rootCauseEvidence": "'Algo bara' activa mentions_money=True por 'bara'/'econ' con budget.ambiguous=True (amount_not_determinable), pero hasUnresolvedTextBudget() sólo bloquea si el texto coincide con el regex de unidades monetarias explícitas (pesos/varos/mxn), dejando pasar 120 candidatos sin filtro de precio."
+    },
+    {
+      "caseId": 10,
+      "phrase": "Sin nada de puerco",
+      "category": "Exclusión Alimentaria Explícita",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:24",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c10",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "sin",
+          "nada",
+          "puerco"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [
+          "puerco"
+        ],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "sin",
+          "nada",
+          "puerco"
+        ],
+        "negations": [
+          "puerco"
+        ]
+      },
+      "linguisticMentions": [
+        {
+          "concept": "exclusion",
+          "category": "negation",
+          "form": "sin nada de",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            0,
+            11
+          ]
+        },
+        {
+          "concept": "cerdo",
+          "category": "food",
+          "form": "puerco",
+          "relation": "equivalence",
+          "role": "excluded",
+          "source": "author_curated",
+          "normalizedSpan": [
+            12,
+            18
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "exclusion",
+          "value": "puerco",
+          "origin": "ml_extraction",
+          "state": "desconocido",
+          "reason": "inferred_extraction_verification_required"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 1.498,
+      "stageLatenciesMs": {
+        "interpretMs": 0.346,
+        "backendConsolidationAndEligibilityMs": 1.152,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Extraer puerco/cerdo (ignorar 'nada') y exigir evidencia certificada de ausencia (R3)",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 4/6: restrictionConsolidation.js + eligibilityService.js (R3)",
+      "rootCauseEvidence": "Abstención segura fail-closed (no_verified_results): la exclusión ('puerco'/'carne'/'camaronsitos') es detectada por /interpret y las guardias del backend, y como el catálogo DEMO no tiene certificaciones R3 de ausencia completa en las 9 secciones de receta, el backend descarta los 120 candidatos."
+    },
+    {
+      "caseId": 11,
+      "phrase": "No como carne, pero sí pescado",
+      "category": "Exclusión Compuesta con Excepción",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:25",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c11",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "no",
+          "como",
+          "carne",
+          "pero",
+          "si",
+          "pescado"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [
+          "carne"
+        ],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "no",
+          "como",
+          "carne",
+          "pero",
+          "si",
+          "pescado"
+        ],
+        "negations": [
+          "carne"
+        ]
+      },
+      "linguisticMentions": [
+        {
+          "concept": "exclusion",
+          "category": "negation",
+          "form": "no como",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            0,
+            7
+          ]
+        },
+        {
+          "concept": "carne",
+          "category": "food_category",
+          "form": "carne",
+          "relation": "equivalence",
+          "role": "excluded",
+          "source": "author_curated",
+          "normalizedSpan": [
+            8,
+            13
+          ]
+        },
+        {
+          "concept": "pescado",
+          "category": "food",
+          "form": "pescado",
+          "relation": "equivalence",
+          "role": "exception",
+          "source": "morphology",
+          "normalizedSpan": [
+            22,
+            29
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "exclusion",
+          "value": "carne",
+          "origin": "ml_extraction",
+          "state": "desconocido",
+          "reason": "inferred_extraction_verification_required"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 0.645,
+      "stageLatenciesMs": {
+        "interpretMs": 0.399,
+        "backendConsolidationAndEligibilityMs": 0.246,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Extraer exclusión de carne y rol exception para pescado; abstenerse sin evidencia R3 de ausencia de carne",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 4/6: restrictionConsolidation.js + eligibilityService.js (R3)",
+      "rootCauseEvidence": "Abstención segura fail-closed (no_verified_results): la exclusión ('puerco'/'carne'/'camaronsitos') es detectada por /interpret y las guardias del backend, y como el catálogo DEMO no tiene certificaciones R3 de ausencia completa en las 9 secciones de receta, el backend descarta los 120 candidatos."
+    },
+    {
+      "caseId": 12,
+      "phrase": "No lleve leche",
+      "category": "Exclusión Crítica de Alérgeno (Lácteos)",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:25",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c12",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "no",
+          "lleve",
+          "leche"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [
+          "leche"
+        ],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "no",
+          "lleve",
+          "leche"
+        ],
+        "negations": [
+          "leche"
+        ]
+      },
+      "linguisticMentions": [
+        {
+          "concept": "leche",
+          "category": "food",
+          "form": "leche",
+          "relation": "equivalence",
+          "role": "excluded",
+          "source": "morphology",
+          "normalizedSpan": [
+            9,
+            14
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "exclusion",
+          "value": "leche",
+          "origin": "ml_extraction",
+          "state": "desconocido",
+          "reason": "inferred_extraction_verification_required"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 0.502,
+      "stageLatenciesMs": {
+        "interpretMs": 0.247,
+        "backendConsolidationAndEligibilityMs": 0.255,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Extraer 'leche' en excludedIngredients y bloquear cualquier platillo sin ausencia certificada (Caso 20 histórico en BITACORA)",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "FAIL-SEGURIDAD",
+      "severity": "CRÍTICA",
+      "suspectedLayer": "Capa 3/4/8: Desfase de contenedor en ejecución (BITACORA Caso 20) vs Código actual (4f6df83)",
+      "rootCauseEvidence": "HALLAZGO CRÍTICO DOCUMENTADO: En el código actual (4f6df83), parse_negations('No lleve leche') extrae ['leche'] y evaluateEligibility bloquea los 120 candidatos (statusCode='no_verified_results'). Sin embargo, en la corrida previa contra localhost:4000 con contenedor desactualizado (BITACORA 2026-11-15 Caso 20), /interpret devolvió excludedIngredients=[] y recomendó un licuado con leche declarada."
+    },
+    {
+      "caseId": 13,
+      "phrase": "Un pollito con verduras",
+      "category": "Alimento Principal + Calificador",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:26",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c13",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "pollito",
+          "verduras",
+          "pollo",
+          "verdura"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "pollito",
+          "verduras",
+          "pollo",
+          "verdura"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "pollo",
+          "category": "food",
+          "form": "pollito",
+          "relation": "diminutive",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            3,
+            10
+          ]
+        },
+        {
+          "concept": "verdura",
+          "category": "food_category",
+          "form": "verduras",
+          "relation": "equivalence",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            15,
+            23
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": true,
+        "relevanceFamilies": [
+          "pollo"
+        ]
+      },
+      "candidateCount": 120,
+      "eligibleCount": 1,
+      "finalDishIds": [
+        "779f5158-4a8d-4ed5-a04a-03227f3f5714"
+      ],
+      "finalDishSummaries": [
+        "Pollo con verduras ($66 MXN, picante=0, score=0.9826)"
+      ],
+      "elapsedMs": 1.43,
+      "stageLatenciesMs": {
+        "interpretMs": 0.33,
+        "backendConsolidationAndEligibilityMs": 0.903,
+        "rankMs": 0.197
+      },
+      "expectedBehavior": "Filtrar familia primaria 'pollo' (primaryFoodRelevance) y priorizar coincidencia con verduras",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=1 -> returned=1 (Pollo con verduras ($66 MXN, picante=0, score=0.9826)).",
+      "evaluation": "PASS",
+      "severity": "BAJA",
+      "suspectedLayer": "Capa 7: primaryFoodRelevance.js",
+      "rootCauseEvidence": "selectRelevantFood() detecta familia primaria 'pollo' y calificador requerido 'verdura', devolviendo exactamente 'Pollo con verduras'."
+    },
+    {
+      "caseId": 14,
+      "phrase": "Un postrecito frío",
+      "category": "Categoría / Temperatura",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:26",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c14",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "postrecito",
+          "frio",
+          "postre"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "postrecito",
+          "frio",
+          "postre"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "postre",
+          "category": "dish",
+          "form": "postrecito",
+          "relation": "diminutive",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            3,
+            13
+          ]
+        },
+        {
+          "concept": "frio",
+          "category": "preference",
+          "form": "frio",
+          "relation": "equivalence",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            14,
+            18
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": true,
+        "relevanceFamilies": [
+          "postre"
+        ]
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 0.844,
+      "stageLatenciesMs": {
+        "interpretMs": 0.286,
+        "backendConsolidationAndEligibilityMs": 0.558,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Extraer concepto 'postre' + 'frio'; advertir que primaryFoodRelevance no restringe 'postre' como familia cerrada",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "FAIL-RELEVANCIA",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 7: primaryFoodRelevance.js + /rank",
+      "rootCauseEvidence": "En 'Un postrecito frío', primaryFoodRelevance filtra por la familia 'postre' si coincide en nombre/ingredientes principales, pero los platillos de la categoría 'Postres' ('Pastel de chocolate', 'Flan de vainilla', etc.) no contienen la palabra 'postre' en su nombre ni en ingredientes_principales, provocando 0 candidatos relevantes (no_relevant_candidates -> no_verified_results) porque dishMatchesFamily() no inspecciona categoria_nombre."
+    },
+    {
+      "caseId": 15,
+      "phrase": "Quiero algo dulce, pero no empalagoso",
+      "category": "Preferencia Sensorial con Negación No-Ingrediente",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:27",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c15",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "dulce",
+          "pero",
+          "no",
+          "empalagoso"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "dulce",
+          "pero",
+          "no",
+          "empalagoso"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "dulce",
+          "category": "flavor",
+          "form": "dulce",
+          "relation": "equivalence",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            12,
+            17
+          ]
+        },
+        {
+          "concept": "empalagoso",
+          "category": "flavor",
+          "form": "empalagoso",
+          "relation": "equivalence",
+          "role": "excluded",
+          "source": "morphology",
+          "normalizedSpan": [
+            26,
+            36
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 120,
+      "finalDishIds": [
+        "b1d3353a-9670-42e2-ae68-11da03737b15",
+        "dfa51fdc-d2df-405a-a614-a6cea993c90c",
+        "1d50a93a-7b54-40cf-a780-b3cc5dcbbb42",
+        "49cb9c2f-6373-4fbb-a26b-14d9fcf96a54",
+        "39d2e31b-08e2-4a24-aff9-8daec90ea3c7"
+      ],
+      "finalDishSummaries": [
+        "Omelette de champiñón ($73 MXN, picante=0, score=0.8597)",
+        "Arroz con champiñones ($80 MXN, picante=0, score=0.8228)",
+        "Ensalada de nopales ($45 MXN, picante=0, score=0.8228)",
+        "Hamburguesa con champiñón ($73 MXN, picante=0, score=0.8228)",
+        "Pizza de champiñón ($52 MXN, picante=0, score=0.8228)"
+      ],
+      "elapsedMs": 31.073,
+      "stageLatenciesMs": {
+        "interpretMs": 0.469,
+        "backendConsolidationAndEligibilityMs": 0.075,
+        "rankMs": 30.529
+      },
+      "expectedBehavior": "Tratar 'empalagoso' como preferencia/textura pero observar que parse_negations no debe tratar adjetivos subjetivos como alérgenos",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Omelette de champiñón ($73 MXN, picante=0, score=0.8597), Arroz con champiñones ($80 MXN, picante=0, score=0.8228), Ensalada de nopales ($45 MXN, picante=0, score=0.8228)).",
+      "evaluation": "FAIL-RELEVANCIA",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 3/5: hasOmittedTextExclusion (menuController.js:918) + restrictionConsolidation.js",
+      "rootCauseEvidence": "En 'Quiero algo dulce, pero no empalagoso', ni 'dulce' ni 'empalagoso' filtran por categoría 'Postres'/'Panadería' en primaryFoodRelevance.js, por lo que /rank devuelve platillos de panadería/postres o generales sin verificar dulzor."
+    },
+    {
+      "caseId": 16,
+      "phrase": "Quiero un pollito",
+      "category": "Alimento Principal Diminutivo",
+      "sourceReference": "backend/tests/integration/r3-isolated/mexican-language-http.test.cjs:22",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c16",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "pollito",
+          "pollo"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "pollito",
+          "pollo"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "pollo",
+          "category": "food",
+          "form": "pollito",
+          "relation": "diminutive",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            10,
+            17
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": true,
+        "relevanceFamilies": [
+          "pollo"
+        ]
+      },
+      "candidateCount": 120,
+      "eligibleCount": 25,
+      "finalDishIds": [
+        "cbf0b5b7-cc49-4fc0-a458-aeb4cf54bf9e",
+        "4cbede06-c554-4ce8-a929-c0fd9e9c8f94",
+        "5ae4b9ee-a21e-4c39-a93c-934b8d2b699d",
+        "86cc6713-d803-46a8-ab0c-a59540a017f9",
+        "9965545c-c55a-4dd4-ab44-b4741df432c8"
+      ],
+      "finalDishSummaries": [
+        "Caldo de pollo ($52 MXN, picante=0, score=0.9507)",
+        "Ensalada de pollo ($73 MXN, picante=0, score=0.9507)",
+        "Fajitas de pollo ($94 MXN, picante=0, score=0.9507)",
+        "Pollo al romero ($80 MXN, picante=0, score=0.9507)",
+        "Pollo con ajo ($59 MXN, picante=0, score=0.9507)"
+      ],
+      "elapsedMs": 3.546,
+      "stageLatenciesMs": {
+        "interpretMs": 0.326,
+        "backendConsolidationAndEligibilityMs": 0.702,
+        "rankMs": 2.518
+      },
+      "expectedBehavior": "Devolver exclusivamente platillos de la familia 'pollo' (sin mezclar conchas/pizzas)",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=25 -> returned=5 (Caldo de pollo ($52 MXN, picante=0, score=0.9507), Ensalada de pollo ($73 MXN, picante=0, score=0.9507), Fajitas de pollo ($94 MXN, picante=0, score=0.9507)).",
+      "evaluation": "PASS",
+      "severity": "BAJA",
+      "suspectedLayer": "NINGUNA (Flujo nominal)",
+      "rootCauseEvidence": "Ejecución determinista verificada en código actual (4f6df83); 5 recomendaciones coherentes."
+    },
+    {
+      "caseId": 17,
+      "phrase": "No quiero gastar más de 100 varos",
+      "category": "Operador Monetario Negativo Coloquial",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:49",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c17",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "no",
+          "gastar",
+          "mas",
+          "100",
+          "varos"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": 100.0,
+          "currency": "MXN",
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.75,
+          "notes": []
+        },
+        "entities": [
+          "no",
+          "gastar",
+          "mas",
+          "100",
+          "varos"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "maximo",
+          "category": "budget_operator",
+          "form": "no quiero gastar mas de",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            0,
+            23
+          ]
+        },
+        {
+          "concept": "dinero",
+          "category": "money",
+          "form": "varos",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            28,
+            33
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "budget",
+          "value": 100,
+          "origin": "text_corroborated",
+          "state": "desconocido",
+          "reason": "text_budget_corroborated"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 1.319,
+      "stageLatenciesMs": {
+        "interpretMs": 0.956,
+        "backendConsolidationAndEligibilityMs": 0.363,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Corroborar tope de 100 MXN; abstenerse sin evidencia MXN certificada",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 6: eligibilityService.js (DEC-002 evaluateBudgetPrice)",
+      "rootCauseEvidence": "Abstención segura (no_verified_results): el presupuesto textual se corrobora en restrictionConsolidation.js, pero en modo estricto (sin LOCAL_MXN_BUDGET ni evidencia de moneda certificada por el restaurante) evaluateBudgetPrice() devuelve estado 'desconocido' (budget_currency_unverified)."
+    },
+    {
+      "caseId": 18,
+      "phrase": "Como unos 100 pesos",
+      "category": "Presupuesto Aproximado",
+      "sourceReference": "backend/tests/integration/r3-isolated/mexican-language-http.test.cjs:39",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c18",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "como",
+          "100",
+          "pesos"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": "MXN",
+          "ambiguous": true,
+          "perPerson": null,
+          "confidence": 0.35,
+          "notes": [
+            "approximate_budget"
+          ]
+        },
+        "entities": [
+          "como",
+          "100",
+          "pesos"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "aproximado",
+          "category": "budget_operator",
+          "form": "como unos",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            0,
+            9
+          ]
+        },
+        {
+          "concept": "dinero",
+          "category": "money",
+          "form": "pesos",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            14,
+            19
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 120,
+      "finalDishIds": [
+        "db3bb00c-d289-466b-a05d-ce5769cc9432",
+        "43e191c3-e4f4-47a6-a4e0-940e1213d1d5",
+        "dfa51fdc-d2df-405a-a614-a6cea993c90c",
+        "aa0ce1bb-4cc5-498b-a4cf-74e5953817d7",
+        "7ac00187-9315-4135-a654-08fb8f80bf07"
+      ],
+      "finalDishSummaries": [
+        "Arroz a la mexicana ($87 MXN, picante=0, score=0.55)",
+        "Arroz con camarones ($87 MXN, picante=0, score=0.55)",
+        "Arroz con champiñones ($80 MXN, picante=0, score=0.55)",
+        "Arroz con huevo ($80 MXN, picante=0, score=0.55)",
+        "Arroz con leche ($59 MXN, picante=0, score=0.55)"
+      ],
+      "elapsedMs": 21.279,
+      "stageLatenciesMs": {
+        "interpretMs": 0.316,
+        "backendConsolidationAndEligibilityMs": 0.093,
+        "rankMs": 20.87
+      },
+      "expectedBehavior": "Marcar budget.ambiguous=True (approximate_budget) y no convertir aproximación en filtro duro",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Arroz a la mexicana ($87 MXN, picante=0, score=0.55), Arroz con camarones ($87 MXN, picante=0, score=0.55), Arroz con champiñones ($80 MXN, picante=0, score=0.55)).",
+      "evaluation": "PASS",
+      "severity": "BAJA",
+      "suspectedLayer": "Capa 3/5: _extract_budget_proposal + hasUnresolvedTextBudget",
+      "rootCauseEvidence": "'Como unos 100 pesos' se clasifica con notes=['approximate_budget'] y budget.ambiguous=True; hasUnresolvedTextBudget() permite explícitamente presupuestos aproximados sin bloquear ni imponer tope falso, marcando safety.priceVerified=false."
+    },
+    {
+      "caseId": 19,
+      "phrase": "No más de ciento veinte pesos",
+      "category": "Monto Escrito Compuesto",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:51",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c19",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "no",
+          "mas",
+          "ciento",
+          "veinte",
+          "pesos"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": "MXN",
+          "ambiguous": true,
+          "perPerson": null,
+          "confidence": 0.35,
+          "notes": [
+            "compound_written_amount_not_supported"
+          ]
+        },
+        "entities": [
+          "no",
+          "mas",
+          "ciento",
+          "veinte",
+          "pesos"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "maximo",
+          "category": "budget_operator",
+          "form": "no mas de",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            0,
+            9
+          ]
+        },
+        {
+          "concept": "dinero",
+          "category": "money",
+          "form": "pesos",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            24,
+            29
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": true,
+        "unverifiedText": true,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 0.452,
+      "stageLatenciesMs": {
+        "interpretMs": 0.389,
+        "backendConsolidationAndEligibilityMs": 0.063,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Marcar compound_written_amount_not_supported y bloquear en hasUnresolvedTextBudget (fail-closed)",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "BAJA",
+      "suspectedLayer": "Capa 3/5: _extract_budget_proposal + hasUnresolvedTextBudget",
+      "rootCauseEvidence": "'No más de ciento veinte pesos' activa compound_written_amount_not_supported (budget.ambiguous=True) y hasUnresolvedTextBudget() bloquea la búsqueda en modo fail-closed (no_verified_results) al existir operador de máximo explícito ('No más de')."
+    },
+    {
+      "caseId": 20,
+      "phrase": "No me molesta que pique",
+      "category": "Permiso de Picante (Doble Negación)",
+      "sourceReference": "backend/tests/integration/r3-isolated/mexican-language-http.test.cjs:47",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c20",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "no",
+          "molesta",
+          "pique"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "no",
+          "molesta",
+          "pique"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "picante",
+          "category": "flavor",
+          "form": "que pique",
+          "relation": "contextual",
+          "role": "permitted",
+          "source": "author_curated",
+          "normalizedSpan": [
+            14,
+            23
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 120,
+      "finalDishIds": [
+        "b1d3353a-9670-42e2-ae68-11da03737b15",
+        "dfa51fdc-d2df-405a-a614-a6cea993c90c",
+        "1d50a93a-7b54-40cf-a780-b3cc5dcbbb42",
+        "49cb9c2f-6373-4fbb-a26b-14d9fcf96a54",
+        "39d2e31b-08e2-4a24-aff9-8daec90ea3c7"
+      ],
+      "finalDishSummaries": [
+        "Omelette de champiñón ($73 MXN, picante=0, score=0.8597)",
+        "Arroz con champiñones ($80 MXN, picante=0, score=0.8228)",
+        "Ensalada de nopales ($45 MXN, picante=0, score=0.8228)",
+        "Hamburguesa con champiñón ($73 MXN, picante=0, score=0.8228)",
+        "Pizza de champiñón ($52 MXN, picante=0, score=0.8228)"
+      ],
+      "elapsedMs": 23.732,
+      "stageLatenciesMs": {
+        "interpretMs": 0.325,
+        "backendConsolidationAndEligibilityMs": 0.023,
+        "rankMs": 23.384
+      },
+      "expectedBehavior": "Asignar role='permitted' a picante, no filtrar nivel_picante > 0 ni bonificar como exigencia",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Omelette de champiñón ($73 MXN, picante=0, score=0.8597), Arroz con champiñones ($80 MXN, picante=0, score=0.8228), Ensalada de nopales ($45 MXN, picante=0, score=0.8228)).",
+      "evaluation": "PASS",
+      "severity": "BAJA",
+      "suspectedLayer": "NINGUNA (Flujo nominal)",
+      "rootCauseEvidence": "Ejecución determinista verificada en código actual (4f6df83); 5 recomendaciones coherentes."
+    },
+    {
+      "caseId": 21,
+      "phrase": "Quiero una tortita",
+      "category": "Ambigüedad Léxica (Torta vs Tortita)",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:42",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c21",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "tortita"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "tortita"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "torta",
+          "category": "dish",
+          "form": "tortita",
+          "relation": "ambiguous_contextual",
+          "role": "ambiguous",
+          "source": "morphology",
+          "normalizedSpan": [
+            11,
+            18
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 120,
+      "finalDishIds": [
+        "757e4d4e-b1c8-4f55-a160-d406e8fcda32",
+        "db3bb00c-d289-466b-a05d-ce5769cc9432",
+        "43e191c3-e4f4-47a6-a4e0-940e1213d1d5",
+        "dfa51fdc-d2df-405a-a614-a6cea993c90c",
+        "aa0ce1bb-4cc5-498b-a4cf-74e5953817d7"
+      ],
+      "finalDishSummaries": [
+        "Sopa de tortilla ($66 MXN, picante=0, score=0.7077)",
+        "Arroz a la mexicana ($87 MXN, picante=0, score=0.55)",
+        "Arroz con camarones ($87 MXN, picante=0, score=0.55)",
+        "Arroz con champiñones ($80 MXN, picante=0, score=0.55)",
+        "Arroz con huevo ($80 MXN, picante=0, score=0.55)"
+      ],
+      "elapsedMs": 11.456,
+      "stageLatenciesMs": {
+        "interpretMs": 0.275,
+        "backendConsolidationAndEligibilityMs": 0.039,
+        "rankMs": 11.142
+      },
+      "expectedBehavior": "Clasificar 'tortita' como ambiguous_contextual sin asumir equivalencia automática con torta",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=120 -> eligibleForRank=120 -> returned=5 (Sopa de tortilla ($66 MXN, picante=0, score=0.7077), Arroz a la mexicana ($87 MXN, picante=0, score=0.55), Arroz con camarones ($87 MXN, picante=0, score=0.55)).",
+      "evaluation": "FAIL-RELEVANCIA",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 2/7: shared/mexican-spanish-v1.json + primaryFoodRelevance.js",
+      "rootCauseEvidence": "'Quiero una tortita' marca 'tortita' como ambiguous_contextual en linguistic.py (no se incluye en foodFamilies().request de primaryFoodRelevance.js), por lo que selectRelevantFood() no restringe candidatos (constrained=False) y /rank devuelve 5 platillos no relacionados con torta."
+    },
+    {
+      "caseId": 22,
+      "phrase": "Sin camaronsitos",
+      "category": "Exclusión con Errata/Diminutivo",
+      "sourceReference": "ml-service/tests/test_mexican_language.py:41",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c22",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "sin",
+          "camaronsitos"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [
+          "camaronsitos"
+        ],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "sin",
+          "camaronsitos"
+        ],
+        "negations": [
+          "camaronsitos"
+        ]
+      },
+      "linguisticMentions": [
+        {
+          "concept": "exclusion",
+          "category": "negation",
+          "form": "sin",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            0,
+            3
+          ]
+        },
+        {
+          "concept": "camaron",
+          "category": "food",
+          "form": "camaronsitos",
+          "relation": "typo_contextual",
+          "role": "ambiguous",
+          "source": "user_examples",
+          "normalizedSpan": [
+            4,
+            16
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "exclusion",
+          "value": "camaronsitos",
+          "origin": "ml_extraction",
+          "state": "desconocido",
+          "reason": "inferred_extraction_verification_required"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 0.469,
+      "stageLatenciesMs": {
+        "interpretMs": 0.27,
+        "backendConsolidationAndEligibilityMs": 0.199,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Bloquear de forma conservadora (fail-closed) al detectar exclusión con typo_contextual",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 4/6: restrictionConsolidation.js + eligibilityService.js (R3)",
+      "rootCauseEvidence": "Abstención segura fail-closed (no_verified_results): la exclusión ('puerco'/'carne'/'camaronsitos') es detectada por /interpret y las guardias del backend, y como el catálogo DEMO no tiene certificaciones R3 de ausencia completa en las 9 secciones de receta, el backend descarta los 120 candidatos."
+    },
+    {
+      "caseId": 23,
+      "phrase": "Quiero camarones pero sin picante",
+      "category": "Alimento Principal + Sin Picante",
+      "sourceReference": "backend/tests/integration/r3-isolated/mexican-language-http.test.cjs:51",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c23",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "ok",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "camarones",
+          "pero",
+          "sin",
+          "picante",
+          "camaron"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": null,
+          "currency": null,
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.0,
+          "notes": []
+        },
+        "entities": [
+          "camarones",
+          "pero",
+          "sin",
+          "picante",
+          "camaron"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "camaron",
+          "category": "food",
+          "form": "camarones",
+          "relation": "equivalence",
+          "role": "mentioned",
+          "source": "dle_camaron",
+          "normalizedSpan": [
+            7,
+            16
+          ]
+        },
+        {
+          "concept": "exclusion",
+          "category": "negation",
+          "form": "sin",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            22,
+            25
+          ]
+        },
+        {
+          "concept": "picante",
+          "category": "flavor",
+          "form": "picante",
+          "relation": "contextual",
+          "role": "excluded",
+          "source": "dem_picoso",
+          "normalizedSpan": [
+            26,
+            33
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": true,
+        "relevanceFamilies": [
+          "camaron"
+        ]
+      },
+      "candidateCount": 120,
+      "eligibleCount": 11,
+      "finalDishIds": [
+        "45737a97-18a1-4824-abe8-4daab190b05e",
+        "664f9dfb-b758-41b7-a6e2-fa1824ca468f",
+        "43e191c3-e4f4-47a6-a4e0-940e1213d1d5",
+        "f0a5af44-6175-486c-af25-e1760f75e782",
+        "4b423b53-d850-42ea-a2f8-78980f84ebad"
+      ],
+      "finalDishSummaries": [
+        "Tacos de camarón ($80 MXN, picante=0, score=0.9843)",
+        "Tostada de camarón ($66 MXN, picante=0, score=0.9843)",
+        "Arroz con camarones ($87 MXN, picante=0, score=0.9838)",
+        "Camarones a la plancha ($59 MXN, picante=0, score=0.9838)",
+        "Camarones al ajo ($45 MXN, picante=0, score=0.9838)"
+      ],
+      "elapsedMs": 3.772,
+      "stageLatenciesMs": {
+        "interpretMs": 0.446,
+        "backendConsolidationAndEligibilityMs": 0.62,
+        "rankMs": 2.706
+      },
+      "expectedBehavior": "Filtrar familia 'camaron' + nivel_picante === 0 únicamente",
+      "observedBehavior": "HTTP 200 (ok): candidateCount=120 -> eligibleAfterR3=120 -> afterSpice=117 -> eligibleForRank=11 -> returned=5 (Tacos de camarón ($80 MXN, picante=0, score=0.9843), Tostada de camarón ($66 MXN, picante=0, score=0.9843), Arroz con camarones ($87 MXN, picante=0, score=0.9838)).",
+      "evaluation": "PASS",
+      "severity": "BAJA",
+      "suspectedLayer": "NINGUNA (Flujo nominal)",
+      "rootCauseEvidence": "Ejecución determinista verificada en código actual (4f6df83); 5 recomendaciones coherentes."
+    },
+    {
+      "caseId": 24,
+      "phrase": "Quiero algo dulce como pan, pero solo tengo 100 pesos",
+      "category": "Antojo + Presupuesto Explícito",
+      "sourceReference": "backend/tests/integration/r3-isolated/single-message.test.cjs:31",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c24",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "dulce",
+          "como",
+          "pan",
+          "pero",
+          "solo",
+          "tengo",
+          "100",
+          "pesos"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [],
+        "budget": {
+          "amount": 100.0,
+          "currency": "MXN",
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.75,
+          "notes": []
+        },
+        "entities": [
+          "dulce",
+          "como",
+          "pan",
+          "pero",
+          "solo",
+          "tengo",
+          "100",
+          "pesos"
+        ],
+        "negations": []
+      },
+      "linguisticMentions": [
+        {
+          "concept": "dulce",
+          "category": "flavor",
+          "form": "dulce",
+          "relation": "equivalence",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            12,
+            17
+          ]
+        },
+        {
+          "concept": "pan",
+          "category": "food",
+          "form": "pan",
+          "relation": "equivalence",
+          "role": "mentioned",
+          "source": "morphology",
+          "normalizedSpan": [
+            23,
+            26
+          ]
+        },
+        {
+          "concept": "dinero",
+          "category": "money",
+          "form": "pesos",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            47,
+            52
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "budget",
+          "value": 100,
+          "origin": "text_corroborated",
+          "state": "desconocido",
+          "reason": "text_budget_corroborated"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 1.126,
+      "stageLatenciesMs": {
+        "interpretMs": 0.595,
+        "backendConsolidationAndEligibilityMs": 0.531,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Corroborar presupuesto <= 100 MXN; requerir evidencia MXN certificada",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 6: eligibilityService.js (DEC-002 evaluateBudgetPrice)",
+      "rootCauseEvidence": "Abstención segura (no_verified_results): el presupuesto textual se corrobora en restrictionConsolidation.js, pero en modo estricto (sin LOCAL_MXN_BUDGET ni evidencia de moneda certificada por el restaurante) evaluateBudgetPrice() devuelve estado 'desconocido' (budget_currency_unverified)."
+    },
+    {
+      "caseId": 25,
+      "phrase": "Quiero algo picoso sin puerco, y tengo 100 pesos",
+      "category": "Picante + Exclusión + Presupuesto",
+      "sourceReference": "backend/tests/integration/r3-isolated/single-message.test.cjs:31",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c25",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": 200,
+      "statusCode": "no_verified_results",
+      "parsedIntent": {
+        "intent": "recommendation",
+        "preferences": [
+          "picoso",
+          "sin",
+          "puerco",
+          "tengo",
+          "100",
+          "pesos",
+          "picante"
+        ],
+        "allergies": [],
+        "diet": "none",
+        "excludedIngredients": [
+          "puerco"
+        ],
+        "budget": {
+          "amount": 100.0,
+          "currency": "MXN",
+          "ambiguous": false,
+          "perPerson": null,
+          "confidence": 0.75,
+          "notes": []
+        },
+        "entities": [
+          "picoso",
+          "sin",
+          "puerco",
+          "tengo",
+          "100",
+          "pesos",
+          "picante"
+        ],
+        "negations": [
+          "puerco"
+        ]
+      },
+      "linguisticMentions": [
+        {
+          "concept": "picante",
+          "category": "flavor",
+          "form": "picoso",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "dem_picoso",
+          "normalizedSpan": [
+            12,
+            18
+          ]
+        },
+        {
+          "concept": "exclusion",
+          "category": "negation",
+          "form": "sin",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "author_curated",
+          "normalizedSpan": [
+            19,
+            22
+          ]
+        },
+        {
+          "concept": "cerdo",
+          "category": "food",
+          "form": "puerco",
+          "relation": "equivalence",
+          "role": "excluded",
+          "source": "author_curated",
+          "normalizedSpan": [
+            23,
+            29
+          ]
+        },
+        {
+          "concept": "dinero",
+          "category": "money",
+          "form": "pesos",
+          "relation": "contextual",
+          "role": "mentioned",
+          "source": "user_examples",
+          "normalizedSpan": [
+            42,
+            47
+          ]
+        }
+      ],
+      "consolidatedRestrictions": [
+        {
+          "category": "budget",
+          "value": 100,
+          "origin": "text_corroborated",
+          "state": "desconocido",
+          "reason": "text_budget_corroborated"
+        },
+        {
+          "category": "exclusion",
+          "value": "puerco",
+          "origin": "ml_extraction",
+          "state": "desconocido",
+          "reason": "inferred_extraction_verification_required"
+        }
+      ],
+      "guards": {
+        "omittedExclusion": false,
+        "unresolvedBudget": false,
+        "unverifiedText": false,
+        "relevanceConstrained": false,
+        "relevanceFamilies": []
+      },
+      "candidateCount": 120,
+      "eligibleCount": 0,
+      "finalDishIds": [],
+      "finalDishSummaries": [],
+      "elapsedMs": 1.187,
+      "stageLatenciesMs": {
+        "interpretMs": 0.568,
+        "backendConsolidationAndEligibilityMs": 0.619,
+        "rankMs": 0.0
+      },
+      "expectedBehavior": "Exigir ausencia certificada de cerdo y precio MXN certificado <= 100",
+      "observedBehavior": "HTTP 200 (no_verified_results): candidateCount=120 -> eligibleAfterR3=0 -> afterSpice=0 -> eligibleForRank=0 -> returned=0 (0 recomendaciones).",
+      "evaluation": "NO-VERIFICABLE",
+      "severity": "MEDIA",
+      "suspectedLayer": "Capa 4/6: restrictionConsolidation.js + eligibilityService.js (R3)",
+      "rootCauseEvidence": "Abstención segura fail-closed (no_verified_results): la exclusión ('puerco'/'carne'/'camaronsitos') es detectada por /interpret y las guardias del backend, y como el catálogo DEMO no tiene certificaciones R3 de ausencia completa en las 9 secciones de receta, el backend descarta los 120 candidatos."
+    },
+    {
+      "caseId": 26,
+      "phrase": "[BLOQUEADO: Frase #26 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]",
+      "category": "Bloqueo de Evidencia Fuente",
+      "sourceReference": "BITACORA.md (referencia sin archivo en Git)",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c26",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": null,
+      "statusCode": "blocked_missing_source_artifact",
+      "parsedIntent": {},
+      "consolidatedRestrictions": [],
+      "candidateCount": null,
+      "eligibleCount": null,
+      "finalDishIds": [],
+      "finalDishNames": [],
+      "elapsedMs": null,
+      "expectedBehavior": "Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido",
+      "observedBehavior": "No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).",
+      "evaluation": "BLOQUEADO",
+      "severity": "ALTA",
+      "suspectedLayer": "EVIDENCIA-FUENTE-GIT",
+      "rootCauseEvidence": "Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible."
+    },
+    {
+      "caseId": 27,
+      "phrase": "[BLOQUEADO: Frase #27 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]",
+      "category": "Bloqueo de Evidencia Fuente",
+      "sourceReference": "BITACORA.md (referencia sin archivo en Git)",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c27",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": null,
+      "statusCode": "blocked_missing_source_artifact",
+      "parsedIntent": {},
+      "consolidatedRestrictions": [],
+      "candidateCount": null,
+      "eligibleCount": null,
+      "finalDishIds": [],
+      "finalDishNames": [],
+      "elapsedMs": null,
+      "expectedBehavior": "Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido",
+      "observedBehavior": "No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).",
+      "evaluation": "BLOQUEADO",
+      "severity": "ALTA",
+      "suspectedLayer": "EVIDENCIA-FUENTE-GIT",
+      "rootCauseEvidence": "Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible."
+    },
+    {
+      "caseId": 28,
+      "phrase": "[BLOQUEADO: Frase #28 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]",
+      "category": "Bloqueo de Evidencia Fuente",
+      "sourceReference": "BITACORA.md (referencia sin archivo en Git)",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c28",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": null,
+      "statusCode": "blocked_missing_source_artifact",
+      "parsedIntent": {},
+      "consolidatedRestrictions": [],
+      "candidateCount": null,
+      "eligibleCount": null,
+      "finalDishIds": [],
+      "finalDishNames": [],
+      "elapsedMs": null,
+      "expectedBehavior": "Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido",
+      "observedBehavior": "No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).",
+      "evaluation": "BLOQUEADO",
+      "severity": "ALTA",
+      "suspectedLayer": "EVIDENCIA-FUENTE-GIT",
+      "rootCauseEvidence": "Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible."
+    },
+    {
+      "caseId": 29,
+      "phrase": "[BLOQUEADO: Frase #29 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]",
+      "category": "Bloqueo de Evidencia Fuente",
+      "sourceReference": "BITACORA.md (referencia sin archivo en Git)",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c29",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": null,
+      "statusCode": "blocked_missing_source_artifact",
+      "parsedIntent": {},
+      "consolidatedRestrictions": [],
+      "candidateCount": null,
+      "eligibleCount": null,
+      "finalDishIds": [],
+      "finalDishNames": [],
+      "elapsedMs": null,
+      "expectedBehavior": "Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido",
+      "observedBehavior": "No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).",
+      "evaluation": "BLOQUEADO",
+      "severity": "ALTA",
+      "suspectedLayer": "EVIDENCIA-FUENTE-GIT",
+      "rootCauseEvidence": "Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible."
+    },
+    {
+      "caseId": 30,
+      "phrase": "[BLOQUEADO: Frase #30 ausente — docs/evidencias/demo-local-30-consultas.json no versionado en commit 4f6df83]",
+      "category": "Bloqueo de Evidencia Fuente",
+      "sourceReference": "BITACORA.md (referencia sin archivo en Git)",
+      "environment": "local-audit-felix-g (commit 4f6df83, Node v24.22.1 + Python 3.13.7, dataset synthetic_demo_v1 120 platillos)",
+      "requestId": "audit-felix-c30",
+      "endpoint": "POST /api/public/menu/recommendations",
+      "httpStatus": null,
+      "statusCode": "blocked_missing_source_artifact",
+      "parsedIntent": {},
+      "consolidatedRestrictions": [],
+      "candidateCount": null,
+      "eligibleCount": null,
+      "finalDishIds": [],
+      "finalDishNames": [],
+      "elapsedMs": null,
+      "expectedBehavior": "Recuperar frase literal de docs/evidencias/demo-local-30-consultas.json sin inventar contenido",
+      "observedBehavior": "No ejecutado: el archivo fuente docs/evidencias/demo-local-30-consultas.json no fue incluido en el repositorio (commit 4f6df83).",
+      "evaluation": "BLOQUEADO",
+      "severity": "ALTA",
+      "suspectedLayer": "EVIDENCIA-FUENTE-GIT",
+      "rootCauseEvidence": "Política de bloqueos ISSUE-01-ML-30-FRASES.md: prohibido inventar frases faltantes cuando docs/evidencias/demo-local-30-consultas.json no está disponible."
+    }
+  ]
+}
