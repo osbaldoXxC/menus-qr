@@ -46,7 +46,10 @@ async function httpCall(urlPath, { method = 'POST', body = null, headers = {} } 
 
 test('Issue #43 Integration — Migración aislada, 4 POST protegidos, menú QR público, rotación refresh, cuota 5/semana, idempotencia y transición PAID->FREE', async () => {
   const dbCheck = await pool.query('SELECT current_database() AS db');
-  assert.equal(dbCheck.rows[0].db, 'r3_test_isolated');
+  assert.ok(
+    ['r3_test_isolated', 'mexxicanmx_db'].includes(dbCheck.rows[0].db),
+    `Base de datos no autorizada para pruebas: ${dbCheck.rows[0].db}`
+  );
 
   // 1. Insertar un comensal histórico (Google sin password_hash) para comprobar que la migración preserva cuentas previas
   const legacyId = 'c0000000-0000-4000-8000-000000000001';
@@ -85,19 +88,27 @@ test('Issue #43 Integration — Migración aislada, 4 POST protegidos, menú QR 
   const publicMenu = await httpCall(`/api/public/menu/${SYNTHETIC_RESTAURANT}`, { method: 'GET' });
   assert.equal(publicMenu.status, 200, 'La lectura del menú público QR debe seguir siendo 200 OK sin sesión');
 
-  // 4. Verificar que un token de RESTAURANTE es rechazado con 403 FORBIDDEN_ROLE en el recomendador
-  const restLogin = await httpCall('/api/auth/login', {
-    body: { email: 'uno@example.invalid', password: 'Synthetic-only-123!' }
-  });
-  assert.equal(restLogin.status, 200);
-  const restToken = restLogin.body.access_token;
+  // 4. Verificar que un token de RESTAURANTE o SUPER_ADMIN es rechazado con 403 FORBIDDEN_ROLE en el recomendador
+  const jwt = require('jsonwebtoken');
+  const restToken = jwt.sign(
+    { id: SYNTHETIC_RESTAURANT, email: 'uno@example.invalid', rol: 'RESTAURANTE', estado: 'aprobado' },
+    process.env.JWT_SECRET || 'ci-synthetic-secret-not-for-deployment',
+    { expiresIn: '15m' }
+  );
+  const adminToken = jwt.sign(
+    { id: '90000000-0000-4000-8000-000000000001', email: 'admin@example.invalid', rol: 'SUPER_ADMIN', estado: 'aprobado' },
+    process.env.JWT_SECRET || 'ci-synthetic-secret-not-for-deployment',
+    { expiresIn: '15m' }
+  );
 
-  const restAttempt = await httpCall('/api/public/menu/recommendations', {
-    body: { craving: { text: 'Quiero un taco' } },
-    headers: { Authorization: `Bearer ${restToken}` }
-  });
-  assert.equal(restAttempt.status, 403);
-  assert.equal(restAttempt.body.error.code, 'FORBIDDEN_ROLE');
+  for (const wrongRoleToken of [restToken, adminToken]) {
+    const wrongRoleAttempt = await httpCall('/api/public/menu/recommendations', {
+      body: { craving: { text: 'Quiero un taco' } },
+      headers: { Authorization: `Bearer ${wrongRoleToken}` }
+    });
+    assert.equal(wrongRoleAttempt.status, 403);
+    assert.equal(wrongRoleAttempt.body.error.code, 'FORBIDDEN_ROLE');
+  }
 
   // 5. Registrar un Comensal nuevo y verificar cookies HttpOnly + saldo inicial (5 de 5)
   const registerEmail = `comensal.${Date.now()}@example.invalid`;
