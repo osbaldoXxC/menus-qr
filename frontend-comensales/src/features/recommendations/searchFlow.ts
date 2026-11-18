@@ -3,7 +3,7 @@ import type { RecommendationResponse } from '../../services/recommendationContra
 export type SearchState =
   | { phase: 'idle' | 'loading' }
   | { phase: 'success' | 'no_verified_results'; response: RecommendationResponse }
-  | { phase: 'error'; message: string };
+  | { phase: 'error'; message: string; errorCode?: string; quota?: any };
 
 type SearchRequest = (message: string) => Promise<RecommendationResponse>;
 
@@ -17,11 +17,19 @@ function responseState(response: RecommendationResponse): SearchState {
   return { phase: 'error', message: 'El servicio devolvió una respuesta inesperada. Inténtalo de nuevo.' };
 }
 
-function errorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'response' in error && (error as { response?: unknown }).response) {
-    return 'El servicio no pudo completar la búsqueda. Inténtalo de nuevo.';
+function parseErrorState(error: unknown): { message: string; errorCode?: string; quota?: any } {
+  if (error && typeof error === 'object' && 'response' in error && (error as { response?: any }).response) {
+    const resp = (error as { response: any }).response;
+    const data = resp?.data;
+    const errorCode = data?.error?.code || data?.code;
+    const serverMessage = data?.error?.message || data?.status?.message || data?.mensaje;
+    const quota = data?.meta?.quota || data?.quota;
+    if (errorCode && typeof serverMessage === 'string' && serverMessage.trim()) {
+      return { message: serverMessage, errorCode, quota };
+    }
+    return { message: 'El servicio no pudo completar la búsqueda. Inténtalo de nuevo.', errorCode, quota };
   }
-  return 'No pudimos conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.';
+  return { message: 'No pudimos conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.' };
 }
 
 // State is held here synchronously to prevent duplicate submissions before a
@@ -51,7 +59,10 @@ export function createSearchFlow(request: SearchRequest, publish: (state: Search
       if (!disposed && current === sequence) update(responseState(response));
     } catch (error) {
       if (current === sequence) cancelDelay?.();
-      if (!disposed && current === sequence) update({ phase: 'error', message: errorMessage(error) });
+      if (!disposed && current === sequence) {
+        const parsed = parseErrorState(error);
+        update({ phase: 'error', ...parsed });
+      }
     }
   }
   return { search, edit, dispose, getState: () => state };
