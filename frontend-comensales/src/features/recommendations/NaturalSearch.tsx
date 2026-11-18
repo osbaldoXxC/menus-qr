@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { recommendationService as globalService } from './recommendationService';
 import { recommendationService as restaurantService } from '../../services/recommendation';
 import type { RecommendationResponse } from '../../services/recommendationContract';
+import { comensalAuthService, formatMexicoRenewalDate } from '../../services/comensalAuth';
+import type { ComensalQuota, ComensalUser } from '../../services/comensalAuth';
+import { ComensalAuthModal } from '../../components/ComensalAuthModal';
+import type { AuthModalMode } from '../../components/ComensalAuthModal';
 import { ThemeContext } from '../../context/ThemeContext';
 import { Logo } from '../../pages/components/Logo';
 import { BouncyLoadingScreen } from './BouncyLoadingScreen';
@@ -13,20 +17,69 @@ import type { SearchState } from './searchFlow';
 
 type Props = { restaurantId?: string; initialText?: string };
 
+function generateIntentKey() {
+  return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const [text, setText] = useState(initialText);
   const [state, setState] = useState<SearchState>({ phase: 'idle' });
+  const [user, setUser] = useState<ComensalUser | null>(null);
+  const [quota, setQuota] = useState<ComensalQuota | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
   const flow = useRef<ReturnType<typeof createSearchFlow> | null>(null);
+  const intentKeyRef = useRef<string>(generateIntentKey());
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null);
   const loading = state.phase === 'loading';
 
   useEffect(() => {
+    let active = true;
+    const savedDraft = comensalAuthService.consumePendingCravingDraft();
+    if (savedDraft && !initialText) {
+      setText(savedDraft);
+    }
+    comensalAuthService.getSession().then((session) => {
+      if (!active) return;
+      if (session) {
+        setUser(session.user);
+        setQuota(session.quota);
+      }
+      setAuthChecked(true);
+    }).catch(() => {
+      if (active) setAuthChecked(true);
+    });
+    return () => { active = false; };
+  }, [initialText]);
+
+  useEffect(() => {
     const controller = createSearchFlow(message => {
-      const request = { craving: { text: message, tags: [] } };
+      const request = {
+        craving: { text: message, tags: [] },
+        requestKey: intentKeyRef.current
+      };
       return restaurantId
         ? restaurantService.getRecommendations(restaurantId, request)
         : globalService.getGlobalRecommendations(request);
-    }, setState, 1500);
+    }, (nextState) => {
+      setState(nextState);
+      if (nextState.phase === 'success' || nextState.phase === 'no_verified_results') {
+        const nextQuota = (nextState.response.meta as any)?.quota;
+        if (nextQuota) setQuota(nextQuota);
+      } else if (nextState.phase === 'error') {
+        if (nextState.quota) setQuota(nextState.quota);
+        if (nextState.errorCode === 'AUTH_REQUIRED') {
+          comensalAuthService.savePendingCravingDraft(text);
+          setUser(null);
+          setSessionExpiredNotice(true);
+          setAuthModalMode('login');
+          setAuthModalOpen(true);
+        }
+      }
+    }, 1500);
     flow.current = controller;
     setState({ phase: 'idle' });
     return () => { controller.dispose(); if (flow.current === controller) flow.current = null; };
@@ -37,9 +90,40 @@ export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
     await flow.current?.search(text);
   }
 
-  if (state.phase === 'success') {
-    return <DescubrirResultados response={state.response} embedded={!!restaurantId} onRefine={() => flow.current?.edit()} />;
+  function handleAuthenticated(session: { user: ComensalUser; quota: ComensalQuota }) {
+    setUser(session.user);
+    setQuota(session.quota);
+    setAuthModalOpen(false);
+    setSessionExpiredNotice(false);
+    const restored = comensalAuthService.consumePendingCravingDraft();
+    if (restored && !text.trim()) {
+      setText(restored);
+    }
+    if (state.phase === 'error' && state.errorCode === 'AUTH_REQUIRED') {
+      intentKeyRef.current = generateIntentKey();
+      flow.current?.edit();
+    }
+    // Focus submit button so the user triggers the search with an explicit action (never auto-fire!)
+    setTimeout(() => {
+      submitButtonRef.current?.focus();
+    }, 40);
   }
+
+  async function handleLogout() {
+    await comensalAuthService.logout().catch(() => {});
+    setUser(null);
+    setQuota(null);
+    flow.current?.edit();
+  }
+
+  if (state.phase === 'success') {
+    return <DescubrirResultados response={state.response} embedded={!!restaurantId} onRefine={() => {
+      intentKeyRef.current = generateIntentKey();
+      flow.current?.edit();
+    }} />;
+  }
+
+  const quotaExhausted = !!(quota && !quota.isPaid && quota.remaining !== null && quota.remaining <= 0);
 
   return <div className={`${restaurantId ? '' : 'min-h-screen'} bg-[#FCF5EF] dark:bg-[#15110F] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans flex flex-col relative overflow-hidden transition-colors duration-500`}>
     {!restaurantId && <header className="w-full border-b border-black/[0.06] dark:border-white/[0.06] backdrop-blur-xl bg-white/80 dark:bg-black/80 sticky top-0 z-30 transition-colors duration-300">
@@ -48,10 +132,38 @@ export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
           <Logo size={22} className="group-hover:rotate-12 transition-transform duration-300" />
           <span className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">MexxicanMX</span>
         </Link>
-        <button type="button" onClick={toggleTheme} aria-label="Alternar tema claro y oscuro"
-          className="p-2 text-[#86868B] hover:text-[#1D1D1F] dark:text-[#A1A1A6] dark:hover:text-white rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF4A00]">
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          {user ? (
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline-block text-xs font-semibold text-[#514B48] dark:text-[#E6D9D0]">
+                Hola, {user.nombre.split(' ')[0]}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg border border-[#E9DFD8] dark:border-[#57463B] bg-[#F6F1ED] dark:bg-[#392B24] text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#EFE6DF] transition-colors focus-visible:ring-2 focus-visible:ring-[#FF4A00]"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          ) : authChecked ? (
+            <button
+              type="button"
+              onClick={() => {
+                comensalAuthService.savePendingCravingDraft(text);
+                setAuthModalMode('login');
+                setAuthModalOpen(true);
+              }}
+              className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-[#FFAD62] text-[#1D1D1F] hover:bg-[#FFA04A] transition-colors focus-visible:ring-2 focus-visible:ring-[#FF4A00]"
+            >
+              Iniciar sesión
+            </button>
+          ) : null}
+          <button type="button" onClick={toggleTheme} aria-label="Alternar tema claro y oscuro"
+            className="p-2 text-[#86868B] hover:text-[#1D1D1F] dark:text-[#A1A1A6] dark:hover:text-white rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-[#FF4A00]">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
       </div>
     </header>}
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden"><div className="absolute left-1/2 top-1/2 h-[440px] w-[min(90vw,620px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FF8C35]/[0.38] blur-[100px] dark:bg-[#FF8C00]/[0.18]" /></div>
@@ -63,6 +175,33 @@ export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
         <h1 className="text-2xl sm:text-[28px] font-black text-[#1D1D1F] dark:text-white tracking-tight">¿Qué se te antoja hoy?</h1>
         <p className="text-[13px] sm:text-sm font-normal text-[#626267] dark:text-[#CAC3BE] mt-2 leading-relaxed">Cuéntanos qué quieres comer. Puedes mencionar sabores, ingredientes que no quieres o cuánto deseas gastar.</p>
       </header>
+      {quota && (
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="comensal-quota-banner"
+          className={`rounded-xl border px-3.5 py-2.5 text-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 ${
+            quota.isPaid
+              ? 'border-[#D4A373] bg-[#FFF8F0] dark:bg-[#3A2A1E] text-[#7A3E00] dark:text-[#FFD1A6]'
+              : quotaExhausted
+                ? 'border-red-700 bg-red-50 dark:bg-red-950/50 text-red-900 dark:text-red-200'
+                : 'border-[#E9DFD8] dark:border-[#57463B] bg-[#F6F1ED] dark:bg-[#392B24] text-[#514B48] dark:text-[#E6D9D0]'
+          }`}
+        >
+          {quota.isPaid ? (
+            <span className="font-bold">✨ Plan de pago activo · Recomendaciones sin cuota semanal</span>
+          ) : (
+            <>
+              <span className="font-bold">
+                Usos disponibles: {quota.remaining} de {quota.limit ?? 5}
+              </span>
+              <span className="text-[11px] opacity-90">
+                Se renueva {formatMexicoRenewalDate(quota.resetsAt)}
+              </span>
+            </>
+          )}
+        </div>
+      )}
       <div aria-label="Ejemplos de lo que puedes escribir" className="flex flex-wrap items-center justify-center gap-2 text-xs text-[#514B48] dark:text-[#E6D9D0]">
         <span className="sr-only">Ejemplos: </span>
         <span className="rounded-full border border-[#E9DFD8] bg-[#F6F1ED] px-3 py-1.5 dark:border-[#57463B] dark:bg-[#392B24]">🌶️ Picante</span>
@@ -74,14 +213,16 @@ export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
         <label htmlFor="natural-search-message" className="mb-2 block text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Tu antojo</label>
         <div className="relative">
         <textarea id="natural-search-message" value={text} onChange={e => {
-          flow.current?.edit(); setText(e.target.value);
+          intentKeyRef.current = generateIntentKey();
+          flow.current?.edit();
+          setText(e.target.value);
         }} required maxLength={500} rows={3} aria-describedby="natural-search-count"
           placeholder="Ej. Quiero algo picoso sin puerco, y tengo 100 pesos."
           className="block w-full min-h-[100px] bg-[#F8F8F8] dark:bg-white/[0.05] border border-black/[0.12] dark:border-white/[0.18] rounded-xl px-4 pt-3 pb-7 text-base leading-relaxed text-[#1D1D1F] dark:text-white placeholder-[#626267] dark:placeholder-[#B8B8BE] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[#C43800] dark:focus:outline-[#FFAD80] resize-y transition-colors" />
         <span id="natural-search-count" className="pointer-events-none absolute bottom-2 right-3 text-xs text-[#656065] dark:text-[#C8BDB6]">{text.length}/500 <span className="sr-only">caracteres</span></span>
         </div>
         </div>
-        <button type="submit" disabled={loading || !text.trim()} className="w-full min-h-[48px] py-3 px-6 rounded-xl bg-[#FFAD62] text-[#1D1D1F] font-extrabold text-[15px] shadow-[0_8px_18px_rgba(230,145,68,0.2)] hover:bg-[#FFA04A] active:bg-[#F4933B] transition-[background-color,box-shadow] motion-reduce:transition-none text-center disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9B3000] dark:focus-visible:outline-[#FFAD80]">
+        <button ref={submitButtonRef} type="submit" disabled={loading || !text.trim() || quotaExhausted} className="w-full min-h-[48px] py-3 px-6 rounded-xl bg-[#FFAD62] text-[#1D1D1F] font-extrabold text-[15px] shadow-[0_8px_18px_rgba(230,145,68,0.2)] hover:bg-[#FFA04A] active:bg-[#F4933B] transition-[background-color,box-shadow] motion-reduce:transition-none text-center disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9B3000] dark:focus-visible:outline-[#FFAD80]">
           {loading ? 'Buscando…' : <><span aria-hidden="true" className="mr-2">🌶️</span>Buscar platillos</>}
         </button>
       </form>
@@ -91,6 +232,14 @@ export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
       </div>
     </main>
     {loading && <BouncyLoadingScreen isReady={false} showSpacyStatus={false} />}
+    <ComensalAuthModal
+      isOpen={authModalOpen}
+      initialMode={authModalMode}
+      pendingCravingText={text}
+      sessionExpiredNotice={sessionExpiredNotice}
+      onClose={() => setAuthModalOpen(false)}
+      onAuthenticated={handleAuthenticated}
+    />
   </div>;
 }
 

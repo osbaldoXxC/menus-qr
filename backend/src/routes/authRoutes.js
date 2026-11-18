@@ -11,6 +11,15 @@ const {
   refresh,
   logout
 } = require('../controllers/authController');
+const {
+  registerComensal,
+  loginComensal,
+  refreshComensal,
+  logoutComensal,
+  getComensalMe,
+  forgotComensalPassword,
+  resetComensalPassword
+} = require('../controllers/comensalAuthController');
 
 // OWASP A07: Limitador de tasa para endpoints de autenticación y OTP
 const authLimiter = rateLimit({
@@ -21,28 +30,24 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// POST /api/auth/register
+// Rutas de Restaurantes y Super Admin (Existentes — Intactas)
 router.post('/register', authLimiter, register);
-
-// POST /api/auth/login
 router.post('/login', authLimiter, login);
-
-// POST /api/auth/verify-email
 router.post('/verify-email', authLimiter, verifyEmail);
-
-// POST /api/auth/resend-verification
 router.post('/resend-verification', authLimiter, resendVerification);
-
-// POST /api/auth/forgot-password
 router.post('/forgot-password', authLimiter, forgotPassword);
-
-// POST /api/auth/reset-password
 router.post('/reset-password', authLimiter, resetPassword);
-
-// POST /api/auth/refresh
 router.post('/refresh', authLimiter, refresh);
+router.post('/logout', logout);
 
-// POST /api/auth/logout
-router.post('/logout', logout); // Logout no requiere rate limit agresivo, pero limpia tokens
+// Rutas de Autenticación y Cuota para Rol COMENSAL (Issue #43)
+router.post('/comensal/register', authLimiter, registerComensal);
+router.post('/comensal/login', authLimiter, loginComensal);
+router.post('/comensal/refresh', authLimiter, refreshComensal);
+router.post('/comensal/logout', logoutComensal);
+router.get('/comensal/me', getComensalMe);
+router.get('/comensal/quota/:userId?', getComensalMe);
+router.post('/comensal/forgot-password', authLimiter, forgotComensalPassword);
+router.post('/comensal/reset-password', authLimiter, resetComensalPassword);
 
 module.exports = router;
