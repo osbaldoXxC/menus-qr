@@ -6,6 +6,36 @@ import { restauranteService } from '../../services/restaurante';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { Palette, Layout, Type, Globe, CheckCircle2, AlertCircle, Upload, Image as ImageIcon, Moon, Sun, Sliders, Sparkles, Megaphone, Trash2, Info, X, Monitor, Smartphone, DollarSign } from 'lucide-react';
 import { ResponsiveImageEditor } from './ResponsiveImageEditor';
+import type { ResponsiveImageMap } from '../../utils/responsiveImageUtils';
+
+type Apariencia = {
+  [key: string]: unknown;
+  fondo_tipo?: string; fondo_valor?: string; fondo_blur?: string;
+  fuente_familia?: string; color_normal?: string; color_descripcion?: string;
+  color_hover?: string; color_primario?: string; color_fondo?: string;
+  modo_oscuro?: boolean; border_radius_botones?: string; border_radius_tarjetas?: string;
+  fondo_imagen_url?: string | null; fondo_imagen_horizontal_url?: string | null;
+  fondo_imagen_vertical_url?: string | null; fondo_imagen_blur?: number | string;
+  fondo_imagen_zoom?: number | string | null; fondo_imagen_x?: number | string | null;
+  fondo_imagen_y?: number | string | null; fondo_imagen_rotate?: number | string | null;
+  fondo_imagen_fit?: string | null; fondo_imagen_opacity?: number | string | null;
+  responsive_imagen?: ResponsiveImageMap;
+};
+type Theme = {
+  plan: string; logo_url: string; color_primario: string; color_fondo: string;
+  fuente_familia: string; layout_type: string; layout_type_horizontal?: string; layout_type_vertical?: string;
+  banner_promocional_activo: boolean; banner_promocional_texto: string;
+  config_diseno: {
+    apariencia: Apariencia;
+    layout: { layout_type?: string; layout_type_horizontal?: string; layout_type_vertical?: string;
+      categorias_sticky?: boolean; estilo_encabezado?: string; mostrar_horario?: boolean; mostrar_estado_abierto?: boolean };
+    elementos_visuales: { glassmorphism?: boolean; sombras_habilitadas?: boolean; badge_color?: string;
+      tarjeta_estilo?: string; tarjeta_opacidad?: number; tarjeta_borde?: boolean; tarjeta_color_fondo?: string };
+    informacion: { direccion?: string; ambiente?: string };
+    moneda?: { simbolo?: string; posicion?: string };
+  };
+};
+type SettingValue = string | number | boolean;
 
 const LAYOUTS = [
   { value: 'LISTA_SIMPLE', icon: '📋', label: 'Lista simple', desc: 'Minimalista y directo' },
@@ -104,7 +134,7 @@ export function Configuracion(): JSX.Element {
 
   const [showFondoEditor, setShowFondoEditor] = useState(false);
 
-  const [theme, setTheme] = useState<any>({
+  const [theme, setTheme] = useState<Theme>({
     plan: 'premium',
     logo_url: '',
     color_primario: '#2997FF',
@@ -250,12 +280,12 @@ export function Configuracion(): JSX.Element {
     }
   };
 
-  const updateDisenoApariencia = (key: string, value: any) => {
-    setTheme((prev: any) => {
+  const updateDisenoApariencia = (key: string, value: SettingValue) => {
+    setTheme((prev) => {
       const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {} };
       const apariencia = { ...config.apariencia, [key]: value };
       
-      const extra: any = {};
+      const extra: Record<string, SettingValue> = {};
       if (key === 'color_primario') extra.color_primario = value;
       if (key === 'color_fondo') extra.color_fondo = value;
       if (key === 'fuente_familia') extra.fuente_familia = value;
@@ -271,7 +301,7 @@ export function Configuracion(): JSX.Element {
           apariencia.fondo_imagen_url = '';
         } else if (horiz) {
           // Solo si hay horizontal explícita, se usa como legacy general (pantallas estándar)
-          apariencia.fondo_imagen_url = horiz;
+          apariencia.fondo_imagen_url = typeof horiz === 'string' ? horiz : '';
         } else {
           // Si solo hay vertical, NO asignar a fondo_imagen_url para que las pantallas horizontales no la consuman por error
           apariencia.fondo_imagen_url = '';
@@ -289,12 +319,12 @@ export function Configuracion(): JSX.Element {
     });
   };
 
-  const updateDisenoLayout = (key: string, value: any) => {
-    setTheme((prev: any) => {
+  const updateDisenoLayout = (key: string, value: SettingValue) => {
+    setTheme((prev) => {
       const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {} };
       const layout = { ...config.layout, [key]: value };
       
-      const extra: any = {};
+      const extra: Record<string, SettingValue> = {};
       if (key === 'layout_type_horizontal') extra.layout_type_horizontal = value;
       if (key === 'layout_type_vertical') extra.layout_type_vertical = value;
       
@@ -312,8 +342,8 @@ export function Configuracion(): JSX.Element {
     });
   };
 
-  const updateDisenoElementos = (key: string, value: any) => {
-    setTheme((prev: any) => {
+  const updateDisenoElementos = (key: string, value: SettingValue) => {
+    setTheme((prev) => {
       const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {} };
       const elementos = { ...config.elementos_visuales, [key]: value };
 
@@ -327,8 +357,8 @@ export function Configuracion(): JSX.Element {
     });
   };
 
-  const updateMoneda = (key: string, value: any) => {
-    setTheme((prev: any) => {
+  const updateMoneda = (key: string, value: SettingValue) => {
+    setTheme((prev) => {
       const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {}, moneda: {} };
       const moneda = { ...(config.moneda || { simbolo: '$', posicion: 'prefijo' }), [key]: value };
       return {
@@ -349,7 +379,7 @@ export function Configuracion(): JSX.Element {
     try {
       const res = await restauranteService.uploadBrandingImage(file);
       if (res.url_imagen) {
-        setTheme((prev: any) => ({ ...prev, logo_url: res.url_imagen }));
+        setTheme((prev) => ({ ...prev, logo_url: res.url_imagen }));
       }
     } catch (error) {
       console.error('Error al subir logo:', error);
@@ -461,7 +491,7 @@ export function Configuracion(): JSX.Element {
           verticalImageUrl={theme.config_diseno?.apariencia?.fondo_imagen_vertical_url || ''}
           apariencia={theme.config_diseno?.apariencia || {}}
           onSave={async (updatedApariencia) => {
-            setTheme((prev: any) => {
+            setTheme((prev) => {
               const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {}, informacion: {} };
               return {
                 ...prev,
@@ -475,8 +505,8 @@ export function Configuracion(): JSX.Element {
             // Guardar en el servidor y esperar respuesta
             try {
               // Obtener el estado más reciente del tema
-              const newTheme = await new Promise<any>((resolve) => {
-                setTheme((prev: any) => {
+              const newTheme = await new Promise<Theme>((resolve) => {
+                setTheme((prev) => {
                   const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {}, informacion: {} };
                   const updatedTheme = {
                     ...prev,
@@ -494,7 +524,7 @@ export function Configuracion(): JSX.Element {
 
               // Actualizar con la respuesta del servidor para asegurar sincronización
               if (result.tema && result.tema.config_diseno) {
-                setTheme((prev: any) => ({
+                setTheme((prev) => ({
                   ...prev,
                   config_diseno: result.tema.config_diseno
                 }));
@@ -556,7 +586,7 @@ export function Configuracion(): JSX.Element {
                   {theme.logo_url && (
                     <button 
                       type="button" 
-                      onClick={() => setTheme((prev: any) => ({ ...prev, logo_url: '' }))}
+                      onClick={() => setTheme((prev) => ({ ...prev, logo_url: '' }))}
                       className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold transition-colors mt-2"
                     >
                       <Trash2 size={12} />
@@ -1546,7 +1576,7 @@ export function Configuracion(): JSX.Element {
                     key={fuente.value}
                     type="button"
                     onClick={() => {
-                      setTheme((prev: any) => ({ ...prev, fuente_familia: fuente.value }));
+                      setTheme((prev) => ({ ...prev, fuente_familia: fuente.value }));
                       updateDisenoApariencia('fuente_familia', fuente.value);
                     }}
                     className={`p-5 rounded-2xl border transition-all text-center active:scale-95 flex flex-col justify-center items-center ${
@@ -1578,7 +1608,7 @@ export function Configuracion(): JSX.Element {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setTheme((prev: any) => ({ ...prev, banner_promocional_activo: !prev.banner_promocional_activo }))}
+                  onClick={() => setTheme((prev) => ({ ...prev, banner_promocional_activo: !prev.banner_promocional_activo }))}
                   className={`w-14 h-8 rounded-full transition-colors relative flex items-center px-1 flex-shrink-0 ${
                     theme.banner_promocional_activo ? 'bg-apple-blue' : 'bg-apple-border dark:bg-apple-dark-border'
                   }`}
@@ -1602,7 +1632,7 @@ export function Configuracion(): JSX.Element {
                   <input
                     type="text"
                     value={theme.banner_promocional_texto || ''}
-                    onChange={(e) => setTheme((prev: any) => ({ ...prev, banner_promocional_texto: e.target.value }))}
+                    onChange={(e) => setTheme((prev) => ({ ...prev, banner_promocional_texto: e.target.value }))}
                     placeholder="Ej. ¡Hoy 2x1 en toda la coctelería a partir de las 6:00 PM!"
                     className="w-full px-5 py-3.5 rounded-2xl bg-apple-bg dark:bg-apple-dark-bg border border-apple-border dark:border-apple-dark-border text-sm font-medium focus:border-apple-blue"
                   />
