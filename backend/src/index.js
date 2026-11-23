@@ -18,6 +18,7 @@ const allowedOrigins = [
   process.env.RESTAURANTE_URL,
   process.env.ADMIN_URL,
   'https://app.oamdevsol.site',
+  'https://menu.oamdevsol.site',
   'https://panel.oamdevsol.site',
   'https://backend.oamdevsol.site',
   'https://cdn.oamdevsol.site',
