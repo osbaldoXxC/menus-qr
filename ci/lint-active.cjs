@@ -18,11 +18,11 @@ if (result.warnings.length) {
 }
 const files = Object.keys(result.metafile.inputs)
   .map(file => file.replace(/\\/g, '/'))
-  .filter(file => file.startsWith('src/') && /\.tsx?$/.test(file));
+  .filter(file => file.startsWith('src/') && /\.(?:[cm]?js|jsx|tsx?)$/.test(file));
 if (!files.includes('src/main.tsx') || !files.includes('src/App.tsx')) {
   throw new Error('The active entrypoint was not resolved; refusing to skip lint.');
 }
-console.log(`Linting ${files.length} reachable TypeScript modules.`);
+console.log(`Linting ${files.length} reachable source modules.`);
 const eslint = path.join(path.dirname(projectRequire.resolve('eslint/package.json')), 'bin/eslint.js');
 const run = spawnSync(process.execPath, [eslint, ...files, '--report-unused-disable-directives'], { stdio: 'inherit' });
 if (run.error) throw run.error;

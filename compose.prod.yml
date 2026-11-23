@@ -92,6 +92,11 @@ services:
     build:
       context: ./frontend-comensales
       dockerfile: Dockerfile.prod
+      args:
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required}
+        VITE_PUBLIC_MENU_URL: ${VITE_PUBLIC_MENU_URL:-}
+        VITE_ADMIN_URL: ${VITE_ADMIN_URL:-}
+        VITE_COMENSALES_URL: ${VITE_COMENSALES_URL:-}
     ports:
       - "${FRONTEND_PORT:-3000}:80"
     networks:
@@ -103,6 +108,11 @@ services:
     build:
       context: ./frontend-restaurantes
       dockerfile: Dockerfile.prod
+      args:
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required}
+        VITE_PUBLIC_MENU_URL: ${VITE_PUBLIC_MENU_URL:-}
+        VITE_ADMIN_URL: ${VITE_ADMIN_URL:-}
+        VITE_COMENSALES_URL: ${VITE_COMENSALES_URL:-}
     ports:
       - "${RESTAURANTES_PORT:-3002}:80"
     networks:
@@ -132,6 +142,8 @@ services:
     build:
       context: ./admin
       dockerfile: Dockerfile.prod
+      args:
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required}
     ports:
       - "${ADMIN_PORT:-3001}:80"
     networks:

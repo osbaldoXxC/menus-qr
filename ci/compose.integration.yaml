@@ -30,6 +30,7 @@ services:
     image: ${CI_ML_IMAGE:-mexxicanmx-ci-ml}
     build:
       context: ../ml-service
+    command: [python, /app/run_multiport.py]
     volumes:
       - ../ml-service:/app:ro
       - ../shared:/app/shared:ro
@@ -68,6 +69,7 @@ services:
     volumes:
       - ../backend/src:/app/src:ro
       - ../backend/tests:/app/tests:ro
+      - ../ci:/app/ci:ro
       - ../shared:/app/shared:ro
     ports:
       - "127.0.0.1:${CI_BACKEND_PORT:-43000}:4000"

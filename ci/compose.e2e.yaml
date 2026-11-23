@@ -1,0 +1,8 @@
+services:
+  postgres:
+    volumes:
+      - ../ci/fixtures/03-e2e-users.sql:/docker-entrypoint-initdb.d/03-e2e-users.sql:ro
+  backend:
+    environment:
+      RESTAURANTE_URL: http://127.0.0.1:43011
+      ADMIN_URL: http://127.0.0.1:43012

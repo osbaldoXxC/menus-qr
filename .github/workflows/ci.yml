@@ -23,10 +23,11 @@ jobs:
       - name: Verificar manifiestos y Compose
         run: |
           node -e "for (const p of ['backend','frontend-comensales','frontend-restaurantes','admin']) { require('./'+p+'/package.json'); require('./'+p+'/package-lock.json'); }"
-          printf '%s\n' 'POSTGRES_USER=ci' 'POSTGRES_PASSWORD=ci_only' 'POSTGRES_DB=ci' 'DATABASE_URL=postgresql://ci:ci_only@postgres:5432/ci' 'REDIS_URL=redis://redis:6379' 'JWT_SECRET=synthetic-ci-secret' 'REFRESH_TOKEN_SECRET=synthetic-ci-refresh' > .env
+          printf '%s\n' 'POSTGRES_USER=ci' 'POSTGRES_PASSWORD=ci_only' 'POSTGRES_DB=ci' 'DATABASE_URL=postgresql://ci:ci_only@postgres:5432/ci' 'REDIS_URL=redis://redis:6379' 'JWT_SECRET=synthetic-ci-secret' 'REFRESH_TOKEN_SECRET=synthetic-ci-refresh' 'VITE_API_URL=https://api.example.invalid/api' > .env
           docker compose config --quiet
           docker compose -f compose.prod.yml config --quiet
           docker compose -f ci/compose.integration.yaml config --quiet
+          docker compose -f ci/compose.integration.yaml -f ci/compose.e2e.yaml config --quiet
           docker compose -f ci/compose.integration.yaml -f ci/compose.r3.yaml config --quiet
           docker compose -f ci/compose.persistence.yaml config --quiet
       - name: Validar workflow con actionlint verificado
@@ -108,12 +109,14 @@ jobs:
           cache-dependency-path: ${{ matrix.app }}/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Lint del frontend
+        run: npm run lint
       - name: Pruebas disponibles del frontend
         env:
           APP_NAME: ${{ matrix.app }}
         run: |
           case "$APP_NAME" in
-            frontend-comensales) node --test tests/search-flow.test.cjs ;;
+            frontend-comensales) node --test tests/search-flow.test.cjs tests/recommendation-contract.test.cjs tests/comensal-auth-quota.test.cjs ;;
             frontend-restaurantes) node --test tests/r4-components.test.cjs ;;
             admin) echo 'No existen pruebas automatizadas de admin; cobertura pendiente.' ;;
           esac
@@ -168,7 +171,7 @@ jobs:
           CONTEXT: ${{ matrix.context }}
           DOCKERFILE: ${{ matrix.file }}
           IMAGE_NAME: ${{ matrix.name }}
-        run: docker build --file "$DOCKERFILE" --tag "mexxicanmx-ci-$IMAGE_NAME:$GITHUB_SHA" "$CONTEXT"
+        run: docker build --build-arg VITE_API_URL=https://api.example.invalid/api --file "$DOCKERFILE" --tag "mexxicanmx-ci-$IMAGE_NAME:$GITHUB_SHA" "$CONTEXT"
 
   backend-integration:
     runs-on: ubuntu-latest
@@ -268,7 +271,7 @@ jobs:
           docker compose -f ci/compose.integration.yaml -f ci/compose.r3.yaml exec -T \
             -e R3_INTEGRATION_AUTHORIZED=yes \
             -e R3_TEST_DATABASE_URL=postgresql://ci_test:ci_synthetic_only@postgres:5432/r3_test_isolated \
-            backend sh -c 'find /app/tests/integration -type f \( -name "*.test.js" -o -name "*.test.cjs" \) -print | sort | xargs node --test --test-concurrency=1' | tee all-integration.tap
+            backend sh -c 'sh /app/ci/run-integration-suite.sh' | tee all-integration.tap
           if grep -Eiq '# (skip|skipped) [^0]|# SKIP' all-integration.tap; then
             echo 'Una prueba de integración fue omitida: revisar el inventario y sus prerrequisitos.'
             exit 1
@@ -289,6 +292,8 @@ jobs:
     env:
       COMPOSE_PROJECT_NAME: ci-e2e-${{ github.run_id }}-${{ github.run_attempt }}
       CI_FRONTEND_URL: http://127.0.0.1:43010
+      CI_RESTAURANT_URL: http://127.0.0.1:43011
+      CI_ADMIN_URL: http://127.0.0.1:43012
       VITE_API_URL: http://127.0.0.1:43000/api
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -298,24 +303,37 @@ jobs:
         with:
           node-version: '22.23.5'
           cache: npm
-          cache-dependency-path: frontend-comensales/package-lock.json
+          cache-dependency-path: |
+            frontend-comensales/package-lock.json
+            frontend-restaurantes/package-lock.json
+            admin/package-lock.json
       - name: Iniciar backend y datos sintéticos
-        run: docker compose -f ci/compose.integration.yaml up -d --build --wait --wait-timeout 360
+        run: docker compose -f ci/compose.integration.yaml -f ci/compose.e2e.yaml up -d --build --wait --wait-timeout 360
+      - name: Instalar portales de restaurante y administración
+        run: |
+          npm ci --prefix frontend-restaurantes
+          npm ci --prefix admin
       - name: Instalar dependencias y navegador de prueba
         working-directory: frontend-comensales
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Iniciar frontend aislado
-        working-directory: frontend-comensales
+      - name: Iniciar frontends aislados
         run: |
-          npm run dev -- --host 127.0.0.1 --port 43010 --strictPort > "$RUNNER_TEMP/vite-ci.log" 2>&1 &
-          for _ in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:43010/ > /dev/null; then exit 0; fi
-            sleep 1
+          (cd frontend-comensales && npm run dev -- --host 127.0.0.1 --port 43010 --strictPort) > "$RUNNER_TEMP/vite-diners.log" 2>&1 &
+          (cd frontend-restaurantes && npm run dev -- --host 127.0.0.1 --port 43011 --strictPort) > "$RUNNER_TEMP/vite-restaurants.log" 2>&1 &
+          (cd admin && npm run dev -- --host 127.0.0.1 --port 43012 --strictPort) > "$RUNNER_TEMP/vite-admin.log" 2>&1 &
+          for port in 43010 43011 43012; do
+            ready=0
+            for _ in $(seq 1 60); do
+              if curl --fail --silent "http://127.0.0.1:$port/" > /dev/null; then ready=1; break; fi
+              sleep 1
+            done
+            if [ "$ready" -ne 1 ]; then
+              cat "$RUNNER_TEMP"/vite-*.log
+              exit 1
+            fi
           done
-          cat "$RUNNER_TEMP/vite-ci.log"
-          exit 1
       - name: Ejecutar todas las pruebas E2E existentes
         working-directory: frontend-comensales
         run: npx playwright test --config=playwright.ci.config.ts --project=chromium
@@ -329,8 +347,8 @@ jobs:
       - name: Guardar logs y retirar servicios temporales
         if: always()
         run: |
-          docker compose -f ci/compose.integration.yaml logs --no-color --tail=100
-          docker compose -f ci/compose.integration.yaml down
+          docker compose -f ci/compose.integration.yaml -f ci/compose.e2e.yaml logs --no-color --tail=100
+          docker compose -f ci/compose.integration.yaml -f ci/compose.e2e.yaml down
 
   ci-summary:
     if: always()
