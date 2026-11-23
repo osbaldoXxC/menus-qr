@@ -1,14 +1,12 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { authService } from '../../services/auth';
-import { ThemeContext } from '../../context/ThemeContext';
+import { authService, type AuthResponseError } from '../../services/auth';
 import { Logo } from '../components/Logo';
 
 export function VerifyEmail() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { theme } = useContext(ThemeContext);
   
   // Obtener el correo del estado de navegación (si fue redirigido desde Registro o Login)
   const emailInicial = location.state?.email || '';
@@ -50,8 +48,9 @@ export function VerifyEmail() {
       setTimeout(() => {
         navigate('/login');
       }, 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.mensaje || 'El código ingresado es incorrecto o ha expirado.');
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      setError(err?.response?.data?.mensaje || 'El código ingresado es incorrecto o ha expirado.');
     } finally {
       setLoading(false);
     }
@@ -69,8 +68,9 @@ export function VerifyEmail() {
       await authService.resendVerification(email);
       setSuccess('Se ha enviado un nuevo código OTP a tu correo.');
       setCooldown(60); // Iniciar cooldown de 60 segundos
-    } catch (err: any) {
-      setError(err.response?.data?.mensaje || 'Error al reenviar el código de verificación.');
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      setError(err?.response?.data?.mensaje || 'Error al reenviar el código de verificación.');
     } finally {
       setResending(false);
     }

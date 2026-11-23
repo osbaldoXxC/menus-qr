@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import axios from 'axios';
 import api from '../services/api';
 
 const sections = ['ingredientes_principales', 'ingredientes_secundarios', 'complementos', 'salsas',
@@ -7,21 +8,23 @@ type Evidence = { id?: string; confirmacion_id?: string; confirmado_en: string; 
   procedencia: string; revocado_en?: string; motivo_revocacion?: string; grupo?: string;
   version_precio?: string; receta_revision?: string; taxonomia_revision?: string };
 interface Snapshot {
-  dish: Record<string, any>; recipeVersion: string; catalogFingerprint: string; currencyState: string;
+  dish: Record<string, unknown> & { nombre: string; precio?: string | number }; recipeVersion: string; catalogFingerprint: string; currencyState: string;
   evidence: { prices: Evidence[]; absences: Evidence[]; taxonomy: Array<{
     grupo: string; version: number; revision: string; terms: Array<{ termino_normalizado: string; relacion: string }> }> };
   exclusions: Array<{ group: string; state: string }>;
 }
 const control = 'block w-full p-3 border rounded-lg bg-transparent focus-visible:ring-2 focus-visible:ring-orange-700';
 const button = 'p-3 border rounded-lg focus-visible:ring-2 focus-visible:ring-orange-700 disabled:opacity-50';
-function ingredientLabel(value: any): string {
+function ingredientLabel(value: unknown): string {
   if (typeof value === 'string') return value;
   if (!value || typeof value !== 'object') return 'Composición desconocida';
-  const children = value.subIngredients || value.ingredientes_componentes;
-  return `${value.name || value.nombre || 'Ingrediente sin nombre'}${Array.isArray(children) ? ': ' + children.map(ingredientLabel).join(', ') : ''}`;
+  const ingredient = value as Record<string, unknown>;
+  const children = ingredient.subIngredients || ingredient.ingredientes_componentes;
+  const name = ingredient.name || ingredient.nombre;
+  return `${typeof name === 'string' ? name : 'Ingrediente sin nombre'}${Array.isArray(children) ? ': ' + children.map(ingredientLabel).join(', ') : ''}`;
 }
-function errorMessage(error: any) {
-  const status = error.response?.status;
+function errorMessage(error: unknown) {
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined;
   if (status === 503) return 'La verificación del catálogo aún no está disponible. Los datos continúan sin confirmar.';
   if (status === 403) return 'Solo el propietario autorizado puede confirmar este catálogo.';
   if (status === 409) return 'Los datos cambiaron. Vuelve a cargar y revisa la versión actual antes de confirmar.';
@@ -41,14 +44,14 @@ export function CatalogEvidencePanel({ dishId, dirty }: { dishId: string; dirty:
   const [declarations, setDeclarations] = useState<Record<string, string>>({});
   const [absenceChecked, setAbsenceChecked] = useState(false);
   const [reason, setReason] = useState('');
-  async function load() {
+  const load = useCallback(async () => {
     setBusy(true); setError(''); setSnapshot(null); setReviewedPrice(false);
     setDeclarations({}); setAbsenceChecked(false); setGroup('');
     try { setSnapshot((await api.get(`/menu/platillos/${encodeURIComponent(dishId)}/evidence`)).data); }
     catch (err) { setError(errorMessage(err)); }
     finally { setBusy(false); }
-  }
-  useEffect(() => { void load(); }, [dishId]);
+  }, [dishId]);
+  useEffect(() => { void load(); }, [load]);
   async function perform(path: string, body: unknown) {
     setBusy(true); setError(''); setNotice('');
     try {

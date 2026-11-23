@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '../../services/auth';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -11,7 +11,6 @@ const menuVariants = {
 };
 
 export function Header() {
-  const navigate = useNavigate();
   const location = useLocation();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [user, setUser] = useState(authService.getCurrentUser());

@@ -1,5 +1,10 @@
 import api from './api';
 
+type RestaurantDish = Record<string, unknown> & {
+  url_imagen?: string | null;
+  categoria_nombre?: string;
+};
+
 export const restauranteService = {
   getQR: async () => {
     const response = await api.get('/restaurants/qr');
@@ -43,7 +48,7 @@ export const restauranteService = {
         return `${baseUrl}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
       };
 
-      return platillos.map((p: any) => ({
+      return platillos.map((p: RestaurantDish) => ({
         ...p,
         url_imagen: normalizeImageUrl(p.url_imagen),
         categoria: p.categoria_nombre // El backend devuelve categoria_nombre en la ruta privada
@@ -54,7 +59,7 @@ export const restauranteService = {
     }
   },
 
-  updateTheme: async (data: any) => {
+  updateTheme: async (data: unknown) => {
     try {
       // Debug log removed
       const response = await api.put('/restaurants/theme', data);

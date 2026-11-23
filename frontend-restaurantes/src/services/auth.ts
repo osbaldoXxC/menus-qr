@@ -1,5 +1,7 @@
 import api from './api';
 
+export type AuthResponseError = { response?: { data?: { mensaje?: string; error?: string; requiereVerificacion?: boolean } } };
+
 const AUTH_CHANGE_EVENT = 'auth_change';
 
 export const authService = {

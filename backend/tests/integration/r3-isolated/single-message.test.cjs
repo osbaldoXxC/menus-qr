@@ -2,21 +2,31 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const owner = '10000000-0000-4000-8000-000000000001';
+const owner = randomUUID();
+const email = `single-message-${owner}@example.invalid`;
+const password = 'Synthetic-only-123!';
+const root = process.env.R3_SINGLE_BACKEND_URL || 'http://127.0.0.1:4000';
 async function call(path, body, token, method = 'POST') {
-  const r = await fetch('http://127.0.0.1:4000' + path, { method,
+  const r = await fetch(root + path, { method,
     headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}) });
   return { status: r.status, body: await r.json() };
 }
 test('R4 single-message requests retain budget and exclusion with real ML and PostgreSQL', async () => {
   assert.equal((await pool.query('SELECT current_database() db')).rows[0].db, 'r3_test_isolated');
-  const login = await call('/api/auth/login', { email: 'uno@example.invalid', password: 'Synthetic-only-123!' });
+  await pool.query(`INSERT INTO restaurantes(id,nombre_negocio,email,password_hash,rol,estado,suscripcion_activa,email_verificado)
+    VALUES($1,'Single message sintetico',$2,$3,'RESTAURANTE','aprobado',true,true)`,
+  [owner,email,await bcrypt.hash(password,4)]);
+  const login = await call('/api/auth/login', { email, password });
   assert.equal(login.status, 200); const token = login.body.access_token; const id = randomUUID();
+  const unverifiedId = randomUUID();
   await pool.query(`INSERT INTO platillos (id,restaurante_id,nombre,precio,activo,ingredientes_principales,nivel_picante)
     VALUES ($1,$2,'Pan y pollo sintetico',50,true,'["pollo","chile"]',2)`, [id, owner]);
+  await pool.query(`INSERT INTO platillos (id,restaurante_id,nombre,precio,activo,ingredientes_principales,nivel_picante)
+    VALUES ($1,$2,'Pollo picoso sin evidencia sintetico',35,true,'["pollo","chile"]',2)`, [unverifiedId, owner]);
   const snapshot = await call(`/api/menu/platillos/${id}/evidence`, null, token, 'GET'); assert.equal(snapshot.status, 200);
   const price = await call('/api/menu/evidence/currency', { currency: 'MXN', source: 'Revision sintetica',
     catalogFingerprint: snapshot.body.catalogFingerprint, dishes: [{ id, price: snapshot.body.dish.precio,
@@ -38,8 +48,9 @@ test('R4 single-message requests retain budget and exclusion with real ML and Po
       assert.ok(response.body.recommendations.every(r => r.dish.price <= 100));
     }
     const unrestricted = await call(path, { craving: { text: 'Quiero algo picoso' }, options: { limit: 10 } });
-    const unverified = unrestricted.body.recommendations.find(r => r.dish.id === '30000000-0000-4000-8000-000000000003');
-    assert.ok(unverified); assert.equal(unverified.safety.priceVerified, false);
+    const unverified = unrestricted.body.recommendations.find(r => r.dish.id === unverifiedId);
+    assert.ok(unverified, `unverified fixture should appear in ${path}`);
+    assert.equal(unverified.safety.priceVerified, false);
   }
 });
-test.after(async () => pool.end());
+test.after(() => pool.end());

@@ -58,6 +58,9 @@ function dishMatchesFamily(dish, family) {
 }
 
 function selectRelevantFood(dishes, text) {
+  if (process.env.DISABLE_PRIMARY_FOOD_RELEVANCE === 'true') {
+    return { constrained: false, families: [], dishes: dishes || [] };
+  }
   const families = primaryFoodFamilies(text);
   const qualifier = families.length === 1 ? /\b(?:de|con)\s+(?:(?:un|una)\s+)?([a-z]+)\b/.exec(normalize(text)) : null;
   const required = qualifier && tokenFamily.get(qualifier[1]);

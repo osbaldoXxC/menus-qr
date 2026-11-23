@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // Legacy alternatives: neither module is imported by the current admin entrypoint.
+  globalIgnores(['dist', 'src/components/AdminSupport.tsx', 'src/pages/Support/SupportChat.tsx']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

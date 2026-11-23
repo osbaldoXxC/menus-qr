@@ -24,6 +24,7 @@ function generateIntentKey() {
 export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const [text, setText] = useState(initialText);
+  const latestText = useRef(text);
   const [state, setState] = useState<SearchState>({ phase: 'idle' });
   const [user, setUser] = useState<ComensalUser | null>(null);
   const [quota, setQuota] = useState<ComensalQuota | null>(null);
@@ -35,6 +36,8 @@ export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
   const intentKeyRef = useRef<string>(generateIntentKey());
   const submitButtonRef = useRef<HTMLButtonElement | null>(null);
   const loading = state.phase === 'loading';
+
+  useEffect(() => { latestText.current = text; }, [text]);
 
   useEffect(() => {
     let active = true;
@@ -67,12 +70,12 @@ export function NaturalSearch({ restaurantId, initialText = '' }: Props) {
     }, (nextState) => {
       setState(nextState);
       if (nextState.phase === 'success' || nextState.phase === 'no_verified_results') {
-        const nextQuota = (nextState.response.meta as any)?.quota;
+        const nextQuota = (nextState.response.meta as typeof nextState.response.meta & { quota?: ComensalQuota })?.quota;
         if (nextQuota) setQuota(nextQuota);
       } else if (nextState.phase === 'error') {
         if (nextState.quota) setQuota(nextState.quota);
         if (nextState.errorCode === 'AUTH_REQUIRED') {
-          comensalAuthService.savePendingCravingDraft(text);
+          comensalAuthService.savePendingCravingDraft(latestText.current);
           setUser(null);
           setSessionExpiredNotice(true);
           setAuthModalMode('login');

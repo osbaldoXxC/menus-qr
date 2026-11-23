@@ -918,7 +918,8 @@ async function callMlInterpret({ requestId, craving, restrictions, options }) {
 function hasOmittedTextExclusion(text, extraction) {
   if (typeof text !== 'string') return false;
   // A monetary phrase is not an ingredient exclusion; other clauses remain checked.
-  const foodText = text.replace(/\b(?:sin|no\s+quiero)\s+gastar\s+m[aá]s\s+de\s+(?:\d+(?:[.,]\d{1,2})?|cien|ochenta|cincuenta)\s*(?:pesos?|pesitos|varos?|mxn)\b/giu, ' ')
+  const foodText = text.replace(/\s+y por menos de\s*\$\d+(?:\.\d{1,2})?[.!]?$/iu, ' ')
+    .replace(/\b(?:sin|no\s+quiero)\s+gastar\s+m[aá]s\s+de\s+(?:\d+(?:[.,]\d{1,2})?|cien|ochenta|cincuenta)\s*(?:pesos?|pesitos|varos?|mxn)\b/giu, ' ')
     .replace(/(?<!no\s)\bsin\s+picante\b(?!\s*(?:,|y\b|ni\b|o\b))/giu, ' ');
   const marker = /\b(?:sin|evita(?:r)?|exclu(?:ir|ye)|nada\s+de|libre\s+de|no\s+(?:puedo\s+comer|(?:debe|puede)\s+(?:contener|tener|llevar)|tenga|tiene|contenga|contiene|lleve|lleva|traiga|trae|como|quiero))\s+[\p{L}]/iu;
   if (!marker.test(foodText)) return false;
@@ -975,7 +976,10 @@ function hasOmittedTextAllergy(text, extraction) {
 }
 
 function hasUnresolvedTextBudget(text, restrictions, extraction, consolidation) {
-  if (restrictions && restrictions.budgetMax != null) return false;
+  if (restrictions && restrictions.budgetMax != null) {
+    const strict = typeof text === 'string' && /\by por menos de\s*\$(\d+(?:\.\d{1,2})?)[.!]?$/i.exec(text);
+    return !!strict && Number(restrictions.budgetMax) >= Number(strict[1]);
+  }
   if (typeof text !== 'string' || !/(?:\$\s*\d|(?:\d[\d.,]*|un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien|ciento|doscientos|trescientos|cuatrocientos|quinientos|seiscientos|setecientos|ochocientos|novecientos|mil)(?:\s+(?:y\s+)?(?:uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa))?\s*(?:pesos?|pesitos|mxn|varos?)\b)/i.test(text)) return false;
   const budget = extraction && extraction.budget;
   // An ambiguous amount is never converted into an arbitrary maximum. If an

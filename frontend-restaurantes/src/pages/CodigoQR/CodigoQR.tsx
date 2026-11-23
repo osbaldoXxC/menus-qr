@@ -3,9 +3,16 @@ import { motion } from 'framer-motion';
 import { restauranteService } from '../../services/restaurante';
 import { getPublicMenuUrl } from '../../utils/menuUtils';
 
+type QRResponse = {
+  slug?: string;
+  id?: string;
+  url_menu?: string;
+  url_menu_local?: string;
+  qr_base64?: string;
+};
+
 export function CodigoQR() {
-  const [qrData, setQrData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [qrData, setQrData] = useState<QRResponse | null>(null);
 
   useEffect(() => {
     cargarQR();
@@ -17,8 +24,6 @@ export function CodigoQR() {
       setQrData(data);
     } catch (error) {
       console.error('Error cargando QR:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

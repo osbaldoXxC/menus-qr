@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { comensalService } from '../../services/comensal';
 import { getBreakpointFromWidth, getResolvedBreakpointConfig, BREAKPOINTS_LIST } from '../../utils/responsiveImageUtils';
+import type { ResponsiveImageMap } from '../../utils/responsiveImageUtils';
 
 export interface ComplementoObj {
   nombre: string;
@@ -38,6 +39,33 @@ interface Categoria {
   platillos: Platillo[];
 }
 
+type MenuAppearance = NonNullable<Parameters<typeof getResolvedBreakpointConfig>[2]> & {
+  responsive_imagen?: ResponsiveImageMap;
+  color_normal?: string;
+  color_descripcion?: string;
+  fondo_tipo?: string;
+  fondo_imagen_url?: string;
+  fondo_imagen_horizontal_url?: string;
+  fondo_imagen_vertical_url?: string;
+  fondo_imagen_blur?: number | string;
+  fondo_imagen_brightness?: number | string;
+  fondo_imagen_contrast?: number | string;
+  fondo_imagen_saturate?: number | string;
+  fondo_overlay_color?: string;
+  fondo_overlay_opacity?: number | string;
+  fondo_overlay_gradient?: string;
+  fondo_overlay_gradient_active?: boolean;
+  border_radius_botones?: string;
+  border_radius_tarjetas?: string;
+};
+type MenuDesign = {
+  apariencia?: MenuAppearance;
+  elementos_visuales?: { sombras_habilitadas?: boolean; glassmorphism?: boolean; tarjeta_estilo?: string; tarjeta_opacidad?: number };
+  layout?: { layout_type_horizontal?: string; layout_type_vertical?: string; estilo_encabezado?: string; categorias_sticky?: boolean; mostrar_estado_abierto?: boolean };
+  informacion?: { ambiente?: string; direccion?: string };
+  moneda?: { simbolo?: string; posicion?: string };
+};
+
 interface RestaurantInfo {
   nombre: string;
   logo_url: string;
@@ -51,7 +79,7 @@ interface RestaurantInfo {
   fondo_repetir?: string;
   fondo_tipo?: 'solido' | 'gradiente' | 'imagen';
   fondo_valor?: string;
-  config_diseno?: any;
+  config_diseno?: MenuDesign;
 }
 
 // Detecta si un color hex es oscuro o claro
@@ -167,23 +195,6 @@ const GOURMET_MENU_DUMMY: { restaurante: RestaurantInfo; categorias: Categoria[]
   ],
 };
 
-function hexToRgbStr(hex: string, opacity: number): string {
-  const clean = hex.replace('#', '');
-  if (clean.length === 3) {
-    const r = parseInt(clean[0] + clean[0], 16);
-    const g = parseInt(clean[1] + clean[1], 16);
-    const b = parseInt(clean[2] + clean[2], 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  }
-  if (clean.length === 6) {
-    const r = parseInt(clean.slice(0, 2), 16);
-    const g = parseInt(clean.slice(2, 4), 16);
-    const b = parseInt(clean.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  }
-  return `rgba(10, 13, 16, ${opacity})`;
-}
-
 export function PublicMenu() {
   const { restaurant_id } = useParams<{ restaurant_id: string }>();
   const [loading, setLoading] = useState(true);
@@ -246,9 +257,9 @@ export function PublicMenu() {
         };
 
         const cleanCategorias = data.categorias
-          .map((cat: any) => ({ ...cat, platillos: (cat.platillos || []).filter((p: any) => p.activo !== false) }))
-          .filter((cat: any) => cat.platillos.length > 0)
-          .sort((a: any, b: any) => (a.orden || 0) - (b.orden || 0));
+          .map((cat: Categoria) => ({ ...cat, platillos: (cat.platillos || []).filter((p: Platillo) => p.activo !== false) }))
+          .filter((cat: Categoria) => cat.platillos.length > 0)
+          .sort((a: Categoria, b: Categoria) => (a.orden || 0) - (b.orden || 0));
 
         setMenuData({ restaurante, categorias: cleanCategorias });
       } catch (err) {
@@ -309,7 +320,6 @@ export function PublicMenu() {
   const surface     = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
   const surfaceHover= dark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)';
   const border      = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-  const headerBg    = dark ? `${bg}cc`               : `${bg}cc`;
   const priceBadge  = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
   // Configuración de bordes, sombras y diseño
@@ -383,7 +393,7 @@ export function PublicMenu() {
   const saturate = Math.min(Math.max(Number(configApariencia.fondo_imagen_saturate) || 100, 0), 300);
 
   // Validación de color hexadecimal
-  const overlayColor = hexRegex.test(configApariencia.fondo_overlay_color) 
+  const overlayColor = typeof configApariencia.fondo_overlay_color === 'string' && hexRegex.test(configApariencia.fondo_overlay_color)
     ? configApariencia.fondo_overlay_color 
     : '#000000';
 
@@ -443,7 +453,7 @@ export function PublicMenu() {
                 alt=""
                 className="w-full h-full max-w-none select-none"
                 style={{
-                  objectFit: bpConfig.object_fit as any,
+                  objectFit: bpConfig.object_fit,
                   borderRadius: `${bpConfig.border_radius}px`,
                   filter: `blur(${blurVal}px) brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%)`,
                   transition: 'filter 0.3s ease',
@@ -696,7 +706,7 @@ function PlatilloCard({ platillo, layout, index, colors, onSelect }: {
   platillo: Platillo; layout: string; index: number; colors: CardColors; onSelect: () => void;
 }) {
   const { 
-    primary, textMain, textSub, surface, surfaceHover, border, priceBadge, dark,
+    primary, textMain, textSub, surface, border, priceBadge, dark,
     borderRadiusBotones, borderRadiusTarjetas, sombrasHabilitadas, glassmorphismActivo,
     tarjetaEstilo, tarjetaOpacidad, simboloMoneda, posicionMoneda
   } = colors;
@@ -975,7 +985,7 @@ function PlatilloDetailModal({ platillo, onClose, colors }: {
 
   const [selectedExtras, setSelectedExtras] = useState<Record<number, boolean>>({});
 
-  const complementosList: ComplementoObj[] = (platillo.complementos || []).map((c: any) => {
+  const complementosList: ComplementoObj[] = (platillo.complementos || []).map((c) => {
     if (typeof c === 'string') {
       return { nombre: c, precio: 0 };
     }

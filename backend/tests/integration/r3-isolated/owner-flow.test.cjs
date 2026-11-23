@@ -2,10 +2,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const owner = '10000000-0000-4000-8000-000000000001';
-const root = 'http://127.0.0.1:4000';
+const owner = randomUUID();
+const email = `owner-flow-${owner}@example.invalid`;
+const password = 'Synthetic-only-123!';
+const root = process.env.R3_OWNER_BACKEND_URL || 'http://127.0.0.1:4000';
 async function request(path, body, token, method = 'POST') {
   const response = await fetch(root + path, { method, headers: { ...(body ? { 'content-type': 'application/json' } : {}),
     ...(token ? { authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
@@ -13,7 +16,10 @@ async function request(path, body, token, method = 'POST') {
 }
 test('R3/R4 real owner HTTP: edit price, reconfirm, budget, revoke', async () => {
   assert.equal((await pool.query('SELECT current_database() db')).rows[0].db, 'r3_test_isolated');
-  const login = await request('/api/auth/login', { email: 'uno@example.invalid', password: 'Synthetic-only-123!' });
+  await pool.query(`INSERT INTO restaurantes(id,nombre_negocio,email,password_hash,rol,estado,suscripcion_activa,email_verificado)
+    VALUES($1,'Owner flow sintetico',$2,$3,'RESTAURANTE','aprobado',true,true)`,
+  [owner,email,await bcrypt.hash(password,4)]);
+  const login = await request('/api/auth/login', { email, password });
   assert.equal(login.status, 200); const token = login.body.access_token;
   const id = randomUUID();
   await pool.query(`INSERT INTO platillos(id,restaurante_id,nombre,precio,activo,ingredientes_principales)
@@ -44,4 +50,4 @@ test('R3/R4 real owner HTTP: edit price, reconfirm, budget, revoke', async () =>
   assert.equal((await request(`/api/menu/evidence/currency/${confirmed.body.id}/revoke`, { reason: 'Synthetic flow' }, token)).status, 200);
   assert.equal(await eligible(), false);
 });
-test.after(async () => pool.end());
+test.after(() => pool.end());

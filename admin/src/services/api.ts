@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 let isRefreshing = false;
-let failedQueue: Array<{ resolve: (value: string | null) => void, reject: (reason?: any) => void }> = [];
+let failedQueue: Array<{ resolve: (value: string | null) => void, reject: (reason?: unknown) => void }> = [];
 
 const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue.forEach(prom => {

@@ -6,6 +6,10 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+if (process.env.DISABLE_RATE_LIMIT === 'true') {
+  throw new Error('DISABLE_RATE_LIMIT is not supported; rate limiting must remain enabled');
+}
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -14,6 +18,7 @@ const allowedOrigins = [
   process.env.RESTAURANTE_URL,
   process.env.ADMIN_URL,
   'https://app.oamdevsol.site',
+  'https://menu.oamdevsol.site',
   'https://panel.oamdevsol.site',
   'https://backend.oamdevsol.site',
   'https://cdn.oamdevsol.site',

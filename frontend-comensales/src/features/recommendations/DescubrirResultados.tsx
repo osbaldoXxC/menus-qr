@@ -34,7 +34,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
   });
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [isRestaurantDrawerOpen, setIsRestaurantDrawerOpen] = useState<boolean>(false);
-  const [sessionRestaurants, setSessionRestaurants] = useState<any[]>(() => Array.from(new Map((response?.recommendations || []).map(item => [item.restaurant.id, { ...item.restaurant, topDish: item.dish.nombre }])).values()));
+  const [sessionRestaurants, setSessionRestaurants] = useState<Array<RecommendationItem['restaurant'] & { topDish: string }>>(() => Array.from(new Map((response?.recommendations || []).map(item => [item.restaurant.id, { ...item.restaurant, topDish: item.dish.nombre }])).values()));
 
   // Framer Motion Swipe Values for Tinder Effect
   const dragX = useMotionValue(0);
@@ -42,7 +42,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
   const likeOpacity = useTransform(dragX, [20, 100], [0, 1]);
   const nopeOpacity = useTransform(dragX, [-100, -20], [1, 0]);
 
-  const fetchRecommendations = async () => {
+  const fetchRecommendations = useCallback(async () => {
     setLoading(true);
     setErrorMessage('');
     setRecommendations([]);
@@ -107,11 +107,11 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (!response) fetchRecommendations();
-  }, []);
+    if (!response) void fetchRecommendations();
+  }, [response, fetchRecommendations]);
 
   const currentItem = recommendations[selectedIndex];
   const remainingDishesCount = Math.max(0, recommendations.length - (selectedIndex + 1));
@@ -151,7 +151,7 @@ export const DescubrirResultados: React.FC<DescubrirResultadosProps> = ({ onRefi
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleNextDish, handleOpenCurrentRestaurantMenu, isRestaurantDrawerOpen]);
 
-  const handleDragEnd = (_: any, info: PanInfo) => {
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (info.offset.x > 100 || info.velocity.x > 400) {
       handleOpenCurrentRestaurantMenu();
     } else if (info.offset.x < -100 || info.velocity.x < -400) {

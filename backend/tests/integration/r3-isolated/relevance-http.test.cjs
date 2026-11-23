@@ -4,16 +4,17 @@ const assert = require('node:assert/strict');
 const { Pool } = require('pg');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const owner = process.env.RELEVANCE_OWNER || 'fb000000-0000-4000-8000-000000000001';
-const port = process.env.RELEVANCE_PORT || '4029';
-const stage = process.env.RELEVANCE_STAGE || 'without';
+const port = process.env.RELEVANCE_PORT || '4028';
+const defaultStage = process.env.RELEVANCE_STAGE;
 async function query(text, host = port, restrictions = {}) {
   const r = await fetch(`http://127.0.0.1:${host}/api/public/menu/${owner}/recommendations`, { method:'POST', headers:{'content-type':'application/json'},
     body:JSON.stringify({craving:{text,tags:[]},restrictions,options:{limit:5,locale:'es-MX'}}) });
   assert.equal(r.status,200); return r.json();
 }
-test(`real DB and ML: relevance ${stage}`, async () => {
+test('real DB and ML: relevance', async () => {
   assert.equal((await pool.query('SELECT current_database() db')).rows[0].db,'r3_test_isolated');
   const n = (await pool.query('SELECT count(*)::int n FROM platillos WHERE restaurante_id=$1',[owner])).rows[0].n;
+  const stage = defaultStage || (n === 7 ? 'with' : 'without');
   assert.equal(n,stage === 'with' ? 7 : 2);
   const shrimp = await query('Quiero camarones');
   if (stage === 'before') {

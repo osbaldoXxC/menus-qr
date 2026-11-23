@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { normalizeRecommendationRequest } = require('../../src/validators/recommendationRequest');
@@ -39,7 +39,7 @@ test('DEC-002 ausencia de presupuesto no crea filtro monetario; inferencia ambig
 });
 
 test('presupuestos textuales concretos se corroboran sin convertir aproximaciones en máximos', () => {
-  for (const [text, amount] of [['Traigo 80 varos',80],['No más de cien pesos',100],['No quiero gastar más de 100 varos',100]]) {
+  for (const [text, amount] of [['pastel dulce de chocolate de $110',110],['Traigo 80 varos',80],['No más de cien pesos',100],['No quiero gastar más de 100 varos',100]]) {
     const result = consolidateRestrictions({ structuredRestrictions:{}, mlExtraction:{ budget:{ amount, currency:'MXN', ambiguous:false, sourceText:text } } });
     const budget = result.consolidatedRestrictions.find(x=>x.category==='budget');
     assert.equal(budget?.value,amount,text); assert.equal(budget?.origin,'text_corroborated');

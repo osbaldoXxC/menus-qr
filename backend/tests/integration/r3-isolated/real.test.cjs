@@ -2,17 +2,18 @@
 // Runs only inside the named isolated Compose backend with synthetic data.
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const root = 'http://127.0.0.1:4000';
-const owner = '10000000-0000-4000-8000-000000000001';
-const other = '10000000-0000-4000-8000-000000000002';
-const dish = '30000000-0000-4000-8000-000000000001';
-const otherDish = '30000000-0000-4000-8000-000000000002';
-const missing = '30000000-0000-4000-8000-000000000003';
-const expensive = '30000000-0000-4000-8000-000000000005';
-const admin = '10000000-0000-4000-8000-000000000004';
+const root = process.env.R3_REAL_BACKEND_URL || 'http://127.0.0.1:4000';
+const owner = randomUUID();
+const other = randomUUID();
+const dish = randomUUID();
+const otherDish = randomUUID();
+const missing = randomUUID();
+const expensive = randomUUID();
+const admin = randomUUID();
 let ownerToken, otherToken, adminToken, currencyId, absenceId;
 const paths = ['/api/public/menu/recommendations', `/api/public/menu/${owner}/recommendations`];
 
@@ -36,16 +37,31 @@ function ids(data) { return data.recommendations.map(r => r.dish.id); }
 
 test('R3 isolated PostgreSQL + authenticated HTTP + real ML V2', async t => {
   assert.equal((await pool.query('SELECT current_database() db')).rows[0].db, 'r3_test_isolated');
+  const password = 'Synthetic-only-123!';
+  const passwordHash = await bcrypt.hash(password, 10);
+  const createOwner = (id, name, email) => pool.query(`INSERT INTO restaurantes
+    (id,nombre_negocio,email,password_hash,rol,suscripcion_activa,estado,email_verificado)
+    VALUES ($1,$2,$3,$4,'RESTAURANTE',true,'aprobado',true)`, [id,name,email,passwordHash]);
+  const ownerEmail = `real-owner-${owner}@example.invalid`;
+  const otherEmail = `real-owner-${other}@example.invalid`;
+  const adminEmail = `real-admin-${admin}@example.invalid`;
+  await createOwner(owner, 'Owner R3 sintetico', ownerEmail);
+  await createOwner(other, 'Other R3 sintetico', otherEmail);
+  await pool.query(`INSERT INTO restaurantes
+    (id,nombre_negocio,email,password_hash,rol,suscripcion_activa,estado,email_verificado)
+    VALUES ($1,'Admin sintetico',$2,$3,'SUPER_ADMIN',true,'aprobado',true)`, [admin,adminEmail,passwordHash]);
+  await pool.query(`INSERT INTO platillos
+    (id,restaurante_id,nombre,descripcion,precio,activo,ingredientes_principales,nivel_picante)
+    VALUES ($1,$2,'Taco de pollo picoso sintetico','solo prueba',50,true,'["pollo","chile"]',2),
+      ($3,$4,'Platillo de otro owner','solo prueba',50,true,'["pollo"]',0),
+      ($5,$2,'Taco caro sintetico','solo prueba',150,true,'["pollo","chile"]',2)`,
+  [dish,owner,otherDish,other,expensive]);
   await t.test('historical data starts unverified; real auth sessions', async () => {
-    const evidence = await pool.query('SELECT (SELECT count(*)::int FROM confirmacion_moneda_restaurante) prices, (SELECT count(*)::int FROM platillo_ausencia_confirmada) absences');
+    const evidence = await pool.query(`SELECT
+      (SELECT count(*)::int FROM confirmacion_moneda_restaurante WHERE restaurante_id=$1) prices,
+      (SELECT count(*)::int FROM platillo_ausencia_confirmada WHERE restaurante_id=$1) absences`, [owner]);
     assert.deepEqual(evidence.rows[0], { prices: 0, absences: 0 });
-    const hash = await bcrypt.hash('Synthetic-only-123!', 10);
-    await pool.query('UPDATE restaurantes SET password_hash=$1,email_verificado=true WHERE id=ANY($2::uuid[])', [hash, [owner, other]]);
-    await pool.query(`INSERT INTO restaurantes (id,nombre_negocio,email,password_hash,rol,suscripcion_activa,estado,email_verificado)
-      VALUES ($1,'Admin sintetico','admin@example.invalid',$2,'SUPER_ADMIN',true,'aprobado',true)`, [admin, hash]);
-    await pool.query(`INSERT INTO platillos (id,restaurante_id,nombre,descripcion,precio,activo,ingredientes_principales,nivel_picante)
-      VALUES ($1,$2,'Taco caro sintetico','solo prueba',150,true,'["pollo","chile"]',2)`, [expensive, owner]);
-    ownerToken = await login('uno@example.invalid'); otherToken = await login('dos@example.invalid'); adminToken = await login('admin@example.invalid');
+    ownerToken = await login(ownerEmail); otherToken = await login(otherEmail); adminToken = await login(adminEmail);
   });
   await t.test('scope, unauthenticated, other tenant and admin rejected', async () => {
     assert.equal((await inspect(dish, '')).status, 401);
@@ -91,7 +107,6 @@ test('R3 isolated PostgreSQL + authenticated HTTP + real ML V2', async t => {
     }
   });
   await t.test('reviewed recipe absence, specific scope and no unsupported allergens', async () => {
-    await pool.query("UPDATE exclusion_grupo_version SET estado='aprobada',aprobado_por=$1,aprobado_en=now() WHERE grupo='cerdo' AND version=1", [owner]);
     const snap = await inspect(); const tax = snap.data.evidence.taxonomy.find(x => x.grupo === 'cerdo'); assert.ok(tax);
     const keys = ['ingredientes_principales','ingredientes_secundarios','complementos','salsas','aderezos','condimentos','ingredientes_compuestos','sustituciones_permitidas','modificadores_opcionales'];
     const input = { source: 'Synthetic recipe review', recipeVersion: snap.data.recipeVersion,

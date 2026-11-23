@@ -1,17 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-  Sliders,
   Copy,
   ClipboardCheck,
   RotateCcw,
-  Sparkles,
   Layers,
-  Eye,
   Maximize2,
-  Move,
-  Check,
-  Info
+  Check
 } from 'lucide-react';
 import {
   BreakpointKey,
@@ -24,14 +18,22 @@ import {
   ObjectFitValue
 } from '../../utils/responsiveImageUtils';
 
+type ResponsiveAppearance = NonNullable<Parameters<typeof getResolvedBreakpointConfig>[2]> & {
+  responsive_imagen?: ResponsiveImageMap;
+  fondo_imagen_url?: string | null;
+  fondo_imagen_horizontal_url?: string | null;
+  fondo_imagen_vertical_url?: string | null;
+  [key: string]: unknown;
+};
+
 interface ResponsiveImageEditorProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl?: string;
   horizontalImageUrl?: string;
   verticalImageUrl?: string;
-  apariencia: any;
-  onSave: (updatedApariencia: any) => void;
+  apariencia: ResponsiveAppearance;
+  onSave: (updatedApariencia: ResponsiveAppearance) => void;
 }
 
 export const ResponsiveImageEditor: React.FC<ResponsiveImageEditorProps> = ({
@@ -95,10 +97,9 @@ export const ResponsiveImageEditor: React.FC<ResponsiveImageEditorProps> = ({
   }, [isOpen, apariencia?.responsive_imagen]); // Depender solo de responsive_imagen, no de todo apariencia
 
   // Obtener la configuración resuelta actual (con herencia) para el breakpoint seleccionado
-  const { config: currentConfig, inheritedFrom } = getResolvedBreakpointConfig(
-    responsiveMap,
-    activeBp,
-    apariencia
+  const { config: currentConfig, inheritedFrom } = useMemo(
+    () => getResolvedBreakpointConfig(responsiveMap, activeBp, apariencia),
+    [responsiveMap, activeBp, apariencia]
   );
 
   const isHorizontalActive = BREAKPOINT_GROUPS.HORIZONTAL.includes(activeBp);
@@ -108,6 +109,53 @@ export const ResponsiveImageEditor: React.FC<ResponsiveImageEditorProps> = ({
 
   const activeBpMeta = BREAKPOINTS_LIST.find(b => b.key === activeBp) || BREAKPOINTS_LIST[1];
   const isCustomized = inheritedFrom === activeBp;
+
+  // Actualizar escala
+  useEffect(() => {
+    const updateScale = () => {
+      if (canvasContainerRef.current) {
+        const containerW = canvasContainerRef.current.clientWidth - 48; // padding
+        const containerH = canvasContainerRef.current.clientHeight - 48;
+        const scaleW = containerW / activeBpMeta.defaultW;
+        const scaleH = containerH / activeBpMeta.defaultH;
+        setScaleFactor(Math.min(scaleW, scaleH, 1));
+      }
+    };
+    // timeout for layout paint
+    setTimeout(updateScale, 50);
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [activeBpMeta, isOpen]);
+
+  const pushToHistory = useCallback((newMap: ResponsiveImageMap) => {
+    const nextHist = history.slice(0, historyIndex + 1);
+    nextHist.push(newMap);
+    setHistory(nextHist);
+    setHistoryIndex(nextHist.length - 1);
+  }, [history, historyIndex]);
+
+  // Actualizar cualquier propiedad del breakpoint activo (marca custom=true para esa resolución únicamente)
+  const updateActiveConfig = useCallback((updates: Partial<ImageBreakpointConfig>) => {
+    // Debug log removed
+    const updatedBpConfig: ImageBreakpointConfig = sanitizeBreakpointConfig(
+      {
+        ...currentConfig,
+        ...updates,
+        custom: true
+      },
+      activeBp
+    );
+    // Debug log removed
+
+    const nextMap: ResponsiveImageMap = {
+      ...responsiveMap,
+      [activeBp]: updatedBpConfig
+    };
+    // Debug log removed
+
+    setResponsiveMap(nextMap);
+    pushToHistory(nextMap);
+  }, [currentConfig, activeBp, responsiveMap, pushToHistory]);
 
   // Listen for native DOM change/input events on selects (for Playwright compatibility)
   useEffect(() => {
@@ -130,54 +178,9 @@ export const ResponsiveImageEditor: React.FC<ResponsiveImageEditorProps> = ({
       document.removeEventListener('change', handleNativeSelectChange, true);
       document.removeEventListener('input', handleNativeSelectChange, true);
     };
-  }, [isOpen, responsiveMap, activeBp]);
+  }, [isOpen, updateActiveConfig]);
 
-  // Actualizar escala
-  useEffect(() => {
-    const updateScale = () => {
-      if (canvasContainerRef.current) {
-        const containerW = canvasContainerRef.current.clientWidth - 48; // padding
-        const containerH = canvasContainerRef.current.clientHeight - 48;
-        const scaleW = containerW / activeBpMeta.defaultW;
-        const scaleH = containerH / activeBpMeta.defaultH;
-        setScaleFactor(Math.min(scaleW, scaleH, 1));
-      }
-    };
-    // timeout for layout paint
-    setTimeout(updateScale, 50);
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
-  }, [activeBpMeta, isOpen]);
 
-  const pushToHistory = (newMap: ResponsiveImageMap) => {
-    const nextHist = history.slice(0, historyIndex + 1);
-    nextHist.push(newMap);
-    setHistory(nextHist);
-    setHistoryIndex(nextHist.length - 1);
-  };
-
-  // Actualizar cualquier propiedad del breakpoint activo (marca custom=true para esa resolución únicamente)
-  const updateActiveConfig = (updates: Partial<ImageBreakpointConfig>) => {
-    // Debug log removed
-    const updatedBpConfig: ImageBreakpointConfig = sanitizeBreakpointConfig(
-      {
-        ...currentConfig,
-        ...updates,
-        custom: true
-      },
-      activeBp
-    );
-    // Debug log removed
-
-    const nextMap: ResponsiveImageMap = {
-      ...responsiveMap,
-      [activeBp]: updatedBpConfig
-    };
-    // Debug log removed
-
-    setResponsiveMap(nextMap);
-    pushToHistory(nextMap);
-  };
 
   // Restaurar resolución activa para heredar automáticamente de la superior
   const handleRestoreBreakpoint = () => {
@@ -209,14 +212,6 @@ export const ResponsiveImageEditor: React.FC<ResponsiveImageEditorProps> = ({
       const prevIdx = historyIndex - 1;
       setResponsiveMap(history[prevIdx]);
       setHistoryIndex(prevIdx);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const nextIdx = historyIndex + 1;
-      setResponsiveMap(history[nextIdx]);
-      setHistoryIndex(nextIdx);
     }
   };
 
@@ -309,14 +304,14 @@ export const ResponsiveImageEditor: React.FC<ResponsiveImageEditorProps> = ({
       window.removeEventListener('touchmove', handleMouseMove);
       window.removeEventListener('touchend', handleMouseUp);
     };
-  }, [isDraggingImage, isResizingImage, dragStartPos, initialImagePos, initialImageDim, currentConfig]);
+  }, [isDraggingImage, isResizingImage, dragStartPos, initialImagePos, initialImageDim, scaleFactor, updateActiveConfig]);
 
   // Guardar Cambios
   const handleApplyChanges = () => {
     try {
       // Debug logs removed
       // Build responsive_imagen from current responsiveMap + any DOM values that differ
-      let finalMap = { ...responsiveMap };
+      const finalMap = { ...responsiveMap };
 
       // Read all current input values from DOM to capture Playwright E2E changes
       const selectElement = document.querySelector('select[data-testid="object-fit-select"]') as HTMLSelectElement;
