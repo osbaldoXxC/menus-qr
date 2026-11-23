@@ -30,6 +30,8 @@ jobs:
           docker compose -f ci/compose.integration.yaml -f ci/compose.e2e.yaml config --quiet
           docker compose -f ci/compose.integration.yaml -f ci/compose.r3.yaml config --quiet
           docker compose -f ci/compose.persistence.yaml config --quiet
+      - name: Probar publicación y rollback con servicios simulados
+        run: python3 -m unittest discover -s deploy/tests -v
       - name: Validar workflow con actionlint verificado
         run: |
           curl --fail --silent --show-error --location https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
@@ -179,7 +181,16 @@ jobs:
           CONTEXT: ${{ matrix.context }}
           DOCKERFILE: ${{ matrix.file }}
           IMAGE_NAME: ${{ matrix.name }}
-        run: docker build --build-arg VITE_API_URL=https://api.example.invalid/api --file "$DOCKERFILE" --tag "mexxicanmx-ci-$IMAGE_NAME:$GITHUB_SHA" "$CONTEXT"
+        run: |
+          set -euo pipefail
+          if [[ "$IMAGE_NAME" == backend || "$IMAGE_NAME" == ml ]]; then
+            mkdir -p "$CONTEXT/shared"
+            cp shared/mexican-spanish-v1.json "$CONTEXT/shared/"
+          fi
+          docker build --build-arg VITE_API_URL=https://api.example.invalid/api --file "$DOCKERFILE" --tag "mexxicanmx-ci-$IMAGE_NAME:$GITHUB_SHA" "$CONTEXT"
+          if [[ "$IMAGE_NAME" == backend || "$IMAGE_NAME" == ml ]]; then
+            docker run --rm --entrypoint cat "mexxicanmx-ci-$IMAGE_NAME:$GITHUB_SHA" /app/shared/mexican-spanish-v1.json | cmp shared/mexican-spanish-v1.json -
+          fi
 
   backend-integration:
     runs-on: ubuntu-latest

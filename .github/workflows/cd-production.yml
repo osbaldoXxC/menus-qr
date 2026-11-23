@@ -1,0 +1,140 @@
+name: MexxicanMX production release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: mexxicanmx-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful CI for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'osbaldoXxC/menus-qr'
+          count=$(gh run list --workflow ci.yml --branch main --commit "$GITHUB_SHA" --limit 100 --json status,conclusion,event --jq '[.[] | select(.status == "completed" and .conclusion == "success" and (.event == "push" or .event == "workflow_dispatch"))] | length')
+          test "$count" -gt 0 || { echo 'No successful CI run for this main commit' >&2; exit 1; }
+      - name: Require protected production environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/environments/production" |
+            jq -e '[.protection_rules[]? | select(.type == "required_reviewers") | .reviewers[]?] | length > 0' >/dev/null || {
+              echo 'Create the production environment with required reviewers before release.' >&2
+              exit 1
+            }
+
+  approval:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    outputs:
+      diner_bucket: ${{ steps.config.outputs.diner_bucket }}
+      diner_distribution: ${{ steps.config.outputs.diner_distribution }}
+      diner_url: ${{ steps.config.outputs.diner_url }}
+      public_menu_url: ${{ steps.config.outputs.public_menu_url }}
+    steps:
+      - id: config
+        env:
+          DINER_BUCKET: ${{ vars.MEXXICANMX_DINER_BUCKET }}
+          DINER_DISTRIBUTION: ${{ vars.MEXXICANMX_DINER_DISTRIBUTION }}
+          DINER_URL: ${{ vars.MEXXICANMX_DINER_URL }}
+          PUBLIC_MENU_URL: ${{ vars.MEXXICANMX_PUBLIC_MENU_URL }}
+        run: |
+          set -euo pipefail
+          [[ "$DINER_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ && "$DINER_DISTRIBUTION" =~ ^E[A-Z0-9]+$ ]]
+          [[ "$DINER_URL" =~ ^https://[a-zA-Z0-9.-]+/?$ && "$PUBLIC_MENU_URL" =~ ^https://[a-zA-Z0-9.-]+/menu/?$ ]]
+          [[ "${PUBLIC_MENU_URL%/}" == "${DINER_URL%/}/menu" ]]
+          printf 'diner_bucket=%s\ndiner_distribution=%s\ndiner_url=%s\npublic_menu_url=%s\n' "$DINER_BUCKET" "$DINER_DISTRIBUTION" "$DINER_URL" "$PUBLIC_MENU_URL" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: approval
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: us-east-1
+      RELEASE_BUCKET: oamdevsol-cfn-templates-256663926988
+      RESTAURANT_BUCKET: oamdevsol-restaurant-256663926988
+      ADMIN_BUCKET: oamdevsol-admin-256663926988
+      RESTAURANT_DISTRIBUTION: E1K516ITL1YDZ3
+      ADMIN_DISTRIBUTION: E1NK74NZM8UYXZ
+      RESTAURANT_URL: https://app.oamdevsol.site
+      ADMIN_URL: https://panel.oamdevsol.site
+      API_URL: https://backend.oamdevsol.site
+      DINER_BUCKET: ${{ needs.approval.outputs.diner_bucket }}
+      DINER_DISTRIBUTION: ${{ needs.approval.outputs.diner_distribution }}
+      DINER_URL: ${{ needs.approval.outputs.diner_url }}
+      PUBLIC_MENU_URL: ${{ needs.approval.outputs.public_menu_url }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Check target configuration before AWS access
+        run: |
+          set -euo pipefail
+          test -n "$DINER_BUCKET" && test -n "$DINER_DISTRIBUTION" && test -n "$DINER_URL" && test -n "$PUBLIC_MENU_URL"
+          [[ "$DINER_URL" == https://* && "$PUBLIC_MENU_URL" == https://* ]]
+          [[ "$DINER_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ && "$DINER_DISTRIBUTION" =~ ^E[A-Z0-9]+$ ]]
+          [[ "$DINER_BUCKET" != "$RESTAURANT_BUCKET" && "$DINER_BUCKET" != "$ADMIN_BUCKET" ]]
+          [[ "$DINER_DISTRIBUTION" != "$RESTAURANT_DISTRIBUTION" && "$DINER_DISTRIBUTION" != "$ADMIN_DISTRIBUTION" ]]
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22.23.5'
+      - name: Build frontends
+        env:
+          VITE_API_URL: https://backend.oamdevsol.site/api
+          VITE_PUBLIC_MENU_URL: ${{ needs.approval.outputs.public_menu_url }}
+          VITE_COMENSALES_URL: ${{ needs.approval.outputs.diner_url }}
+          VITE_ADMIN_URL: https://panel.oamdevsol.site
+        run: |
+          set -euo pipefail
+          for app in frontend-comensales frontend-restaurantes admin; do
+            (cd "$app" && npm ci --no-audit --no-fund && npm run build -- --base "/releases/$GITHUB_SHA/$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/")
+          done
+      - name: Build versioned images
+        run: |
+          set -euo pipefail
+          mkdir -p backend/shared ml-service/shared
+          cp shared/mexican-spanish-v1.json backend/shared/
+          cp shared/mexican-spanish-v1.json ml-service/shared/
+          docker build -t "mexxicanmx/backend:$GITHUB_SHA" backend
+          docker build -t "mexxicanmx/ml:$GITHUB_SHA" ml-service
+          docker build -t "mexxicanmx/ai:$GITHUB_SHA" ai-engine
+          for image in backend ml; do
+            docker run --rm --entrypoint cat "mexxicanmx/$image:$GITHUB_SHA" /app/shared/mexican-spanish-v1.json | cmp shared/mexican-spanish-v1.json -
+          done
+          docker save "mexxicanmx/backend:$GITHUB_SHA" "mexxicanmx/ml:$GITHUB_SHA" "mexxicanmx/ai:$GITHUB_SHA" | gzip > "$RUNNER_TEMP/images.tar.gz"
+          sha256sum "$RUNNER_TEMP/images.tar.gz" > "$RUNNER_TEMP/images.sha256"
+      - name: Confirm main still points to the tested commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          test "$current" = "$GITHUB_SHA" || { echo 'main advanced; start a new release' >&2; exit 1; }
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::256663926988:role/mexxicanmx-ci-deploy
+          allowed-account-ids: '256663926988'
+      - name: Publish, deploy and verify
+        run: bash deploy/publish-release.sh

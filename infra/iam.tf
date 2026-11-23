@@ -1,3 +1,4 @@
+# Legacy aws-git trust is preserved for its existing repository; MexxicanMX uses the isolated role in cd.tf.
 resource "aws_iam_role" "github_actions" {
   name = "aws-git"
 
