@@ -1,13 +1,11 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { authService } from '../../services/auth';
-import { ThemeContext } from '../../context/ThemeContext';
+import { authService, type AuthResponseError } from '../../services/auth';
 import { Logo } from '../components/Logo';
 
 export function RecuperarContrasena() {
   const navigate = useNavigate();
-  const { theme } = useContext(ThemeContext);
 
   const [step, setStep] = useState<'request' | 'reset'>('request');
   const [email, setEmail] = useState('');
@@ -50,8 +48,9 @@ export function RecuperarContrasena() {
         setStep('reset');
         setSuccess('');
       }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.mensaje || 'Error al enviar la solicitud de recuperación.');
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      setError(err?.response?.data?.mensaje || 'Error al enviar la solicitud de recuperación.');
     } finally {
       setLoading(false);
     }
@@ -66,8 +65,9 @@ export function RecuperarContrasena() {
       await authService.forgotPassword(email);
       setSuccess('Se ha enviado un nuevo código OTP a tu correo.');
       setCooldown(60);
-    } catch (err: any) {
-      setError(err.response?.data?.mensaje || 'Error al reenviar el código.');
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      setError(err?.response?.data?.mensaje || 'Error al reenviar el código.');
     } finally {
       setLoading(false);
     }
@@ -103,8 +103,9 @@ export function RecuperarContrasena() {
       setTimeout(() => {
         navigate('/login');
       }, 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.mensaje || 'El código es incorrecto o ha expirado.');
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      setError(err?.response?.data?.mensaje || 'El código es incorrecto o ha expirado.');
     } finally {
       setLoading(false);
     }
