@@ -10,6 +10,8 @@ type EditableDish = { id: string };
 type MenuCategory = { nombre: string };
 type RecipeEntry = string | { name?: string; nombre?: string };
 
+const extraSections = ['ingredientes_secundarios', 'salsas', 'aderezos', 'condimentos', 'ingredientes_compuestos', 'sustituciones_permitidas', 'modificadores_opcionales'];
+
 export function NuevoPlatillo() {
   const navigate = useNavigate();
   const { id } = useParams(); // ID para edición
@@ -17,7 +19,6 @@ export function NuevoPlatillo() {
 
   const [dirty, setDirty] = useState(false);
   const [recipeExtras, setRecipeExtras] = useState<Record<string, RecipeEntry[]>>({});
-  const extraSections = ['ingredientes_secundarios', 'salsas', 'aderezos', 'condimentos', 'ingredientes_compuestos', 'sustituciones_permitidas', 'modificadores_opcionales'];
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState('');
