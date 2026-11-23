@@ -3,9 +3,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
+const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const owner = '10000000-0000-4000-8000-000000000001';
+const owner = randomUUID();
+const email = `quality-evidence-${owner}@example.invalid`;
+const password = 'Synthetic-only-123!';
 async function call(path, body, token, method = 'POST') {
   const r = await fetch('http://127.0.0.1:4013' + path, { method, headers: {
     ...(body ? { 'content-type': 'application/json' } : {}), ...(token ? { authorization: `Bearer ${token}` } : {})
@@ -14,7 +17,10 @@ async function call(path, body, token, method = 'POST') {
 }
 test('isolated R3: authenticated synthetic owner, evidence, budget and revocation', async () => {
   assert.equal((await pool.query('SELECT current_database() db')).rows[0].db, 'r3_test_isolated');
-  const login = await call('/api/auth/login', { email: 'uno@example.invalid', password: 'Synthetic-only-123!' });
+  await pool.query(`INSERT INTO restaurantes(id,nombre_negocio,email,password_hash,rol,estado,suscripcion_activa,email_verificado)
+    VALUES($1,'Quality evidence sintetico',$2,$3,'RESTAURANTE','aprobado',true,true)`,
+  [owner,email,await bcrypt.hash(password,4)]);
+  const login = await call('/api/auth/login', { email, password });
   assert.equal(login.status, 200); const token = login.body.access_token; const id = randomUUID();
   await pool.query(`INSERT INTO platillos (id,restaurante_id,nombre,precio,activo,ingredientes_principales,nivel_picante)
     VALUES ($1,$2,'Pollo picante evidencia sintetica',50,true,'["pollo","chile"]',3)`, [id, owner]);
@@ -45,4 +51,4 @@ test('isolated R3: authenticated synthetic owner, evidence, budget and revocatio
   assert.equal(after.status, 200);
   assert.ok(!after.body.recommendations.some(x => x.dish.id === id));
 });
-test.after(async () => pool.end());
+test.after(() => pool.end());

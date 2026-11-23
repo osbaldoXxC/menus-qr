@@ -80,6 +80,24 @@ test('R4 single text supports explicit spicy without pork and budget together', 
   dish.precio = '101.00';
   assert.equal(evaluateDishEligibility(dish, c).eligible, false);
 });
+test('strict combined request accepts verified recipes below the limit only', () => {
+  const text = 'Quiero algo caldoso, picante, sin cerdo y por menos de $150';
+  const c = consolidateRestrictions({ mlExtraction: { excludedIngredients: [{ value:'cerdo', sourceText:text }], budget:{amount:150,currency:'MXN',ambiguous:false,sourceText:text} } });
+  const { dish } = fixture();
+  assert.equal(evaluateDishEligibility(dish, c).eligible, true);
+  const price = domain.getEvidence(dish).prices[0];
+  dish.precio = '150.00'; price.precio_confirmado = '150.00';
+  assert.equal(evaluateDishEligibility(dish, c).eligible, false);
+  dish.precio = '149.99'; price.precio_confirmado = '149.99';
+  assert.equal(evaluateDishEligibility(dish, c).eligible, true);
+});
+test('combined request does not corroborate ambiguous or conflicting exclusions', () => {
+  for (const text of ['Quiero algo caldoso, picante, sin cerdo o pollo y por menos de $150', 'Quiero algo caldoso, picante, sin cerdo, pero con puerco y por menos de $150']) {
+    const { dish } = fixture();
+    const c = consolidateRestrictions({ mlExtraction: { excludedIngredients: [{value:'cerdo',sourceText:text}], budget:{amount:150,currency:'MXN',ambiguous:false,sourceText:text} } });
+    assert.equal(evaluateDishEligibility(dish, c).eligible, false, text);
+  }
+});
 for (const text of ['No quiero algo sin puerco', 'Quiero algo con puerco', 'Quizá sin puerco', 'Sin puerco o sin pollo',
   'Quiero algo sin puerco, pero con cerdo', 'Sin puerco, excepto manteca de cerdo']) {
   test(`R3 uncorroborated or ambiguous text stays closed: ${text}`, () => {

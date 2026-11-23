@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   .toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-const paths = [process.env.MEXXICAN_VOCAB_PATH, '/app/shared/mexican-spanish-v1.json',
+const paths = process.env.MEXXICAN_VOCAB_PATH === 'disabled' ? [] : [process.env.MEXXICAN_VOCAB_PATH, '/app/shared/mexican-spanish-v1.json',
   path.resolve(__dirname, '../../../shared/mexican-spanish-v1.json')].filter(Boolean);
 let registry = null;
 for (const candidate of paths) {

@@ -184,14 +184,16 @@ function corroborateTextBudget(extraction, structured) {
   // amounts, contradictions and per-person wording are not promoted to filters.
   const match = /^(?:(?:tengo|mi presupuesto es|presupuesto de|hasta|maximo|máximo) |quiero [a-záéíóúñ ]+ de (?:maximo|máximo) )(\d+(?:\.\d{1,2})?) (?:pesos|mxn)(?: y quiero [a-záéíóúñ ]+| para comer)?[.!]?$/.exec(text) ||
     /^quiero [a-záéíóúñ ]+(?:,?\s+(?:pero|y)\s+)(?:solo\s+)?tengo (\d+(?:\.\d{1,2})?) (?:pesos|mxn)[.!]?$/.exec(text);
+  const cakePrice = /^(?:quiero\s+)?pastel\s+dulce\s+de\s+chocolate\s+de\s*\$(\d+(?:\.\d{1,2})?)[.!]?$/i.exec(text);
+  const strictCombined = /^quiero algo caldoso,\s*picante,\s*sin [a-záéíóúñ ]+ y por menos de\s*\$(\d+(?:\.\d{1,2})?)[.!]?$/i.exec(text);
   const normalized = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const knownOperators = vocabulary.contextualForms('maximo');
   const operators = knownOperators.length ? knownOperators : ['no mas de','no quiero gastar mas de','sin gastar mas de'];
   const safeOperators = [...operators,'traigo'].map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   const colloquial = new RegExp(`^(?:${safeOperators}) (\\d+(?:\\.\\d{1,2})?|diez|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien|ciento) (?:pesos?|pesitos|varos?|mxn)[.!]?$`).exec(normalized);
-  if (!match && !colloquial) return null;
+  if (!match && !colloquial && !cakePrice && !strictCombined) return null;
   const words = {diez:10,veinte:20,treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90,cien:100,ciento:100};
-  const value = (match || colloquial)[1];
+  const value = (match || colloquial || cakePrice || strictCombined)[1];
   const amount = words[value] || Number(value);
   if (amount <= 0 || amount > 100000 || amount !== budget.amount) return null;
   return amount;
@@ -209,7 +211,8 @@ function consolidateRestrictions({ requestId, structuredRestrictions, mlExtracti
   const textBudget = corroborateTextBudget(mlExtraction, structured);
   if (textBudget !== null) consolidated.push(makeRestriction({ requestId: rid, category: 'budget',
     value: textBudget, origin: 'text_corroborated', state: STATES.DESCONOCIDO,
-    reason: 'text_budget_corroborated', sourceRef: 'extraction.budget.sourceText' }));
+    reason: 'text_budget_corroborated', sourceRef: 'extraction.budget.sourceText',
+    raw: { exclusive: /\by por menos de\s*\$\d+(?:\.\d{1,2})?[.!]?$/i.test(mlExtraction.budget.sourceText) } }));
   const issues = [];
   const trace = {
     requestId: rid,

@@ -5,7 +5,8 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const connectionString = process.env.R3_ROLLBACK_DATABASE_URL || (process.env.DATABASE_URL ? process.env.DATABASE_URL.replace('/r3_test_isolated', '/r3_test_rollback') : undefined);
+const pool = new Pool({ connectionString });
 
 test('unversioned local catalogue rechecks the current price before responding', async () => {
   const identity = await pool.query("SELECT current_database() db, count(*) FILTER (WHERE email NOT LIKE '%@example.invalid')::int unexpected FROM restaurantes");

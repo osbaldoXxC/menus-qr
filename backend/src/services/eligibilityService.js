@@ -112,7 +112,7 @@ function localMxnBudgetEnabled() {
   return ['development', 'test'].includes(process.env.NODE_ENV) && process.env.LOCAL_MXN_BUDGET === 'true';
 }
 
-function evaluateBudgetPrice(price, budget, currencyVerified = false, localMxnAssumed = false) {
+function evaluateBudgetPrice(price, budget, currencyVerified = false, localMxnAssumed = false, exclusive = false) {
   const rawPrice = typeof price === 'string' ? price : (typeof price === 'number' && Number.isFinite(price) ? String(price) : '');
   const rawBudget = typeof budget === 'number' && Number.isFinite(budget) ? String(budget) : '';
   const monetary = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/;
@@ -121,7 +121,7 @@ function evaluateBudgetPrice(price, budget, currencyVerified = false, localMxnAs
   }
   if (!currencyVerified && !localMxnAssumed) return { state: STATES.DESCONOCIDO, reason: 'budget_currency_unverified', evidence: null };
   const toCents = (v) => { const [whole, fraction = ''] = v.split('.'); return BigInt(whole) * 100n + BigInt((fraction + '00').slice(0, 2)); };
-  const compatible = toCents(rawPrice) <= toCents(rawBudget);
+  const compatible = exclusive ? toCents(rawPrice) < toCents(rawBudget) : toCents(rawPrice) <= toCents(rawBudget);
   return { state: compatible ? STATES.COMPATIBLE_SEGUN_DATOS : STATES.INCOMPATIBLE,
     reason: compatible ? 'budget_within_limit' : 'budget_exceeded', evidence: { currency: 'MXN', source: currencyVerified ? 'restaurant_confirmation' : 'local_development_policy' } };
 }
@@ -177,7 +177,7 @@ function evaluateRestrictionAgainstDish(restriction, dish, context = {}) {
   }
 
   if (category === 'budget' && ['structured', 'text_corroborated'].includes(restriction.origin)) {
-    return evaluateBudgetPrice(dish && dish.precio, restriction.value, currencyVerified(dish), localMxnBudgetEnabled());
+    return evaluateBudgetPrice(dish && dish.precio, restriction.value, currencyVerified(dish), localMxnBudgetEnabled(), restriction.raw?.exclusive === true);
   }
 
   // Unknown/other categories cannot be safely verified

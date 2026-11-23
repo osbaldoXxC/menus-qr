@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { Pool } = require('pg');
+const { catalogFingerprint } = require('../../../src/services/catalogEvidence');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const owner = '10000000-0000-4000-8000-000000000001';
 const other = '10000000-0000-4000-8000-000000000002';
@@ -16,6 +17,10 @@ async function rejected(c, query, params, code) {
   await c.query('SAVEPOINT rejected_attempt');
   await assert.rejects(c.query(query, params), { code });
   await c.query('ROLLBACK TO SAVEPOINT rejected_attempt');
+}
+async function fingerprintFor(c, restaurantId) {
+  const dishes = await c.query('SELECT * FROM platillos WHERE restaurante_id=$1 ORDER BY id', [restaurantId]);
+  return catalogFingerprint(dishes.rows);
 }
 test('R3 SQL real: price and recipe ABA changes never resurrect versions', () => isolated(async c => {
   const original = (await c.query('SELECT * FROM platillos WHERE id=$1', [dish])).rows[0];
@@ -41,9 +46,10 @@ test('R3 SQL real: approved taxonomy immutable, retired cannot reopen', () => is
   await rejected(c, "UPDATE exclusion_grupo_version SET estado='aprobada' WHERE grupo='cerdo' AND version=1", [], 'P0001');
 }));
 test('R3 SQL real: stale price and cross-tenant coverage rejected', () => isolated(async c => {
+  const fingerprint = await fingerprintFor(c, owner);
   const header = (await c.query(`INSERT INTO confirmacion_moneda_restaurante
     (restaurante_id,moneda,catalogo_huella,actor_id,actor_tipo,procedencia)
-    VALUES ($1,'MXN',$2,$1,'RESTAURANTE','synthetic test') RETURNING id`, [owner, 'a'.repeat(64)])).rows[0];
+    VALUES ($1,'MXN',$2,$1,'RESTAURANTE','synthetic test') RETURNING id`, [owner, fingerprint])).rows[0];
   await rejected(c, `INSERT INTO confirmacion_precio_platillo
     (confirmacion_id,restaurante_id,platillo_id,precio_confirmado,version_precio) VALUES ($1,$2,$3,1,'stale')`,
   [header.id, owner, dish], 'P0001');
@@ -52,10 +58,17 @@ test('R3 SQL real: stale price and cross-tenant coverage rejected', () => isolat
   [header.id, owner, otherDish], 'P0001');
   await rejected(c, `INSERT INTO confirmacion_moneda_restaurante
     (restaurante_id,moneda,catalogo_huella,actor_id,actor_tipo,procedencia)
-    VALUES ($1,'MXN',$2,$3,'RESTAURANTE','synthetic test')`, [owner, 'a'.repeat(64), other], '23514');
+    VALUES ($1,'MXN',$2,$3,'RESTAURANTE','synthetic test')`, [owner, fingerprint, other], '23514');
 }));
 test('R3 SQL real: revoked evidence cannot be changed or unrevoked', () => isolated(async c => {
-  const row = (await c.query('SELECT id FROM confirmacion_moneda_restaurante WHERE restaurante_id=$1 AND revocado_en IS NOT NULL LIMIT 1', [owner])).rows[0];
+  let row = (await c.query('SELECT id FROM confirmacion_moneda_restaurante WHERE restaurante_id=$1 AND revocado_en IS NOT NULL LIMIT 1', [owner])).rows[0];
+  if (!row) {
+    const fingerprint = await fingerprintFor(c, owner);
+    row = (await c.query(`INSERT INTO confirmacion_moneda_restaurante
+      (restaurante_id,moneda,catalogo_huella,actor_id,actor_tipo,procedencia,revocado_en,revocado_por,motivo_revocacion)
+      VALUES ($1,'MXN',$2,$1,'RESTAURANTE','synthetic isolation test',now(),$1,'synthetic revocation test') RETURNING id`,
+      [owner, fingerprint])).rows[0];
+  }
   assert.ok(row);
   await rejected(c, 'UPDATE confirmacion_moneda_restaurante SET revocado_en=NULL,revocado_por=NULL,motivo_revocacion=NULL WHERE id=$1', [row.id], 'P0001');
   await rejected(c, 'DELETE FROM confirmacion_moneda_restaurante WHERE id=$1', [row.id], 'P0001');

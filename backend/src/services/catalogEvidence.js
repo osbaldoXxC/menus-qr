@@ -116,6 +116,7 @@ function corroborateExclusion(restriction, taxonomy) {
   const group = resolveGroup(restriction.normalizedValue, taxonomy);
   if (!group) return restriction;
   const clauses = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+y por menos de\s*\$\d+(?:\.\d{1,2})?[.!]?$/, '')
     .split(/[,.;!?]|\bpero\b/).map(c => c.trim());
   function exclusionClause(c) {
     const direct = /^(?:quiero (?:algo )?|que )?(?:sin|no tenga) (.+)$/.exec(c);

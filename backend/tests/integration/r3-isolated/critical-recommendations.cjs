@@ -12,14 +12,29 @@ const dishes = [
 async function main() {
   if ((await pool.query('SELECT current_database() db')).rows[0].db !== 'r3_test_isolated') throw Error('Wrong database');
   if (process.argv[2] === 'setup') {
-    const existing = await pool.query('SELECT id FROM restaurantes WHERE id=$1 OR email=$2', [owner,'critical-test@example.invalid']);
-    if (existing.rows.length) throw Error('Fixture already exists; refusing changes');
-    await pool.query('BEGIN');
+    const client = await pool.connect();
     try {
-      await pool.query("INSERT INTO restaurantes(id,nombre_negocio,email,password_hash,estado,suscripcion_activa) VALUES($1,'Prueba critica sintetica',$2,'!disabled','aprobado',true)", [owner,'critical-test@example.invalid']);
-      for (const [id,name,ingredients,spice] of dishes) await pool.query("INSERT INTO platillos(id,restaurante_id,nombre,precio,activo,ingredientes_principales,nivel_picante) VALUES($1,$2,$3,90,true,$4::jsonb,$5)", [id,owner,name,JSON.stringify(ingredients),spice]);
-      await pool.query('COMMIT');
-    } catch (e) { await pool.query('ROLLBACK'); throw e; }
+      const email = 'critical-test@example.invalid';
+      await client.query('BEGIN');
+      const existing = await client.query('SELECT id,email FROM restaurantes WHERE id=$1 OR email=$2', [owner,email]);
+      if (existing.rows.length) {
+        if (existing.rows.length !== 1 || existing.rows[0].id !== owner || existing.rows[0].email !== email) {
+          throw Error('Fixture collision; refusing changes');
+        }
+        const existingDishes = await client.query('SELECT id,nombre FROM platillos WHERE restaurante_id=$1 ORDER BY id', [owner]);
+        const expected = dishes.map(([id,name]) => ({ id, nombre:name })).sort((a,b) => a.id.localeCompare(b.id));
+        if (JSON.stringify(existingDishes.rows) !== JSON.stringify(expected)) throw Error('Fixture changed; refusing changes');
+      } else {
+        await client.query("INSERT INTO restaurantes(id,nombre_negocio,email,password_hash,estado,suscripcion_activa) VALUES($1,'Prueba critica sintetica',$2,'!disabled','aprobado',true)", [owner,email]);
+        for (const [id,name,ingredients,spice] of dishes) await client.query("INSERT INTO platillos(id,restaurante_id,nombre,precio,activo,ingredientes_principales,nivel_picante) VALUES($1,$2,$3,90,true,$4::jsonb,$5)", [id,owner,name,JSON.stringify(ingredients),spice]);
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
   const rows = await pool.query('SELECT id,nombre,ingredientes_principales,nivel_picante FROM platillos WHERE restaurante_id=$1 ORDER BY nombre', [owner]);
   if (rows.rowCount !== 4) throw Error('Fixture not found or has changed');
@@ -31,6 +46,18 @@ async function main() {
     const body = await response.json();
     output.push({ text, http:response.status, body });
   }
-  console.log(JSON.stringify({ database:'r3_test_isolated', owner, candidates:rows.rows, output }));
+  console.log(JSON.stringify({
+    database: 'r3_test_isolated',
+    owner,
+    candidates: rows.rowCount,
+    output: output.map(result => ({
+      text: result.text,
+      http: result.http,
+      status: result.body.status.code,
+      returned: result.body.recommendations.length,
+      mlUsed: result.body.meta.mlUsed,
+      mlReason: result.body.meta.mlReason
+    }))
+  }));
 }
 main().catch(e => { console.error(e); process.exitCode = 1; }).finally(() => pool.end());
