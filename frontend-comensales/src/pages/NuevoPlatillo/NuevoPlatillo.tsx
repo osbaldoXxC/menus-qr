@@ -4,6 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { motion } from 'framer-motion';
 import { restauranteService } from '../../services/restaurante';
+import type { AuthResponseError } from '../../services/auth';
+
+type EditableDish = { id: string };
+type MenuCategory = { nombre: string };
+type RecipeEntry = string | { name?: string; nombre?: string };
 
 export function NuevoPlatillo() {
   const navigate = useNavigate();
@@ -11,7 +16,7 @@ export function NuevoPlatillo() {
   const isEdit = !!id;
 
   const [dirty, setDirty] = useState(false);
-  const [recipeExtras, setRecipeExtras] = useState<Record<string, any[]>>({});
+  const [recipeExtras, setRecipeExtras] = useState<Record<string, RecipeEntry[]>>({});
   const extraSections = ['ingredientes_secundarios', 'salsas', 'aderezos', 'condimentos', 'ingredientes_compuestos', 'sustituciones_permitidas', 'modificadores_opcionales'];
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
@@ -19,7 +24,7 @@ export function NuevoPlatillo() {
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
   const [imagenFile, setImagenFile] = useState<File | null>(null);
   
-  const [categorias, setCategorias] = useState<any[]>([]);
+  const [categorias, setCategorias] = useState<MenuCategory[]>([]);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -44,7 +49,7 @@ export function NuevoPlatillo() {
         // Si es edición, cargar datos del platillo
         if (isEdit) {
           const platillos = await restauranteService.getPlatillos();
-          const platillo = platillos.find((p: any) => p.id === id);
+          const platillo = platillos.find((p: EditableDish) => p.id === id);
           
           if (platillo) {
             setRecipeExtras(Object.fromEntries(extraSections.filter(key => Array.isArray(platillo[key])).map(key => [key, platillo[key]])));
@@ -161,9 +166,10 @@ export function NuevoPlatillo() {
       }
 
       navigate('/dashboard/platillos');
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
       console.error('Error:', err);
-      setError(err.response?.data?.mensaje || `Error al ${isEdit ? 'actualizar' : 'crear'} el platillo`);
+      setError(err?.response?.data?.mensaje || `Error al ${isEdit ? 'actualizar' : 'crear'} el platillo`);
     } finally {
       setLoading(false);
     }
