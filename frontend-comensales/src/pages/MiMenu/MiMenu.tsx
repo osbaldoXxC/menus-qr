@@ -4,9 +4,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { restauranteService } from '../../services/restaurante';
 import { Plus, Search, Edit2, Trash2, Eye, EyeOff, Utensils } from 'lucide-react';
 
+type MenuDish = {
+  id: string | number;
+  nombre: string;
+  categoria?: string;
+  descripcion?: string;
+  precio: string | number;
+  precio_original?: string | number | null;
+  url_imagen?: string | null;
+  activo?: boolean;
+};
+
 export function MiMenu() {
   const navigate = useNavigate();
-  const [platillos, setPlatillos] = useState<any[]>([]);
+  const [platillos, setPlatillos] = useState<MenuDish[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState<string | number | null>(null);
@@ -41,7 +52,7 @@ export function MiMenu() {
     }
   };
 
-  const handleToggleStatus = async (platillo: any) => {
+  const handleToggleStatus = async (platillo: MenuDish) => {
     try {
       const formData = new FormData();
       formData.append('activo', (!platillo.activo).toString());
