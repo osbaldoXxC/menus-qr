@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HexColorPicker } from 'react-colorful';
 import { restauranteService } from '../../services/restaurante';
@@ -81,7 +82,6 @@ export function Configuracion(): JSX.Element {
   const [, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [, setUploadingBg] = useState(false);
   const [uploadingBgHorizontal, setUploadingBgHorizontal] = useState(false);
   const [uploadingBgVertical, setUploadingBgVertical] = useState(false);
   const [showPicker, setShowPicker] = useState<'primario' | 'fondo' | 'badge' | 'texto' | 'text_hover' | 'descripcion' | null>(null);
@@ -327,20 +327,6 @@ export function Configuracion(): JSX.Element {
     });
   };
 
-  const updateInformacion = (key: string, value: any) => {
-    setTheme((prev: any) => {
-      const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {}, informacion: {} };
-      const informacion = { ...config.informacion, [key]: value };
-      return {
-        ...prev,
-        config_diseno: {
-          ...config,
-          informacion
-        }
-      };
-    });
-  };
-
   const updateMoneda = (key: string, value: any) => {
     setTheme((prev: any) => {
       const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {}, moneda: {} };
@@ -370,24 +356,6 @@ export function Configuracion(): JSX.Element {
       alert('Hubo un error al subir la imagen. Intenta de nuevo.');
     } finally {
       setUploadingLogo(false);
-    }
-  };
-
-  const handleBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingBg(true);
-    try {
-      const res = await restauranteService.uploadBrandingImage(file);
-      if (res.url_imagen) {
-        updateDisenoApariencia('fondo_imagen_url', res.url_imagen);
-      }
-    } catch (error) {
-      console.error('Error al subir imagen de fondo:', error);
-      alert('Hubo un error al subir la imagen. Intenta de nuevo.');
-    } finally {
-      setUploadingBg(false);
     }
   };
 
@@ -436,8 +404,8 @@ export function Configuracion(): JSX.Element {
       await restauranteService.updateTheme(theme);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (error: any) {
-      const msg = error?.response?.data?.mensaje || '';
+    } catch (error: unknown) {
+      const msg = axios.isAxiosError<{ mensaje?: string }>(error) ? error.response?.data?.mensaje : undefined;
       setSaveError(msg || 'Error al guardar. Intenta de nuevo.');
     } finally {
       setSaving(false);
