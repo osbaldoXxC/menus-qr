@@ -1,14 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
 import { MessageSquare, Send, AlertCircle, Plus, Star, X } from 'lucide-react';
 import { soporteService, ConversacionSoporte, MensajeSoporte } from '../../services/soporte';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { censurarGroserias } from '../../utils/profanityFilter';
 
+type MensajeVisible = MensajeSoporte & { isSending?: boolean; tempId?: string };
+
 export function Soporte() {
   const { isPremium } = useRestaurant();
   const [conversacionActiva, setConversacionActiva] = useState<ConversacionSoporte | null>(null);
   const [conversacionesCerradas, setConversacionesCerradas] = useState<ConversacionSoporte[]>([]);
-  const [mensajes, setMensajes] = useState<MensajeSoporte[]>([]);
+  const [mensajes, setMensajes] = useState<MensajeVisible[]>([]);
   
   const [nuevoMensaje, setNuevoMensaje] = useState('');
   
@@ -35,7 +38,15 @@ export function Soporte() {
     activeConvRef.current = conversacionActiva;
   }, [conversacionActiva]);
 
-  const fetchDatos = async () => {
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setIsAtBottom(true);
+      setUnreadCount(0);
+    }
+  };
+
+  const fetchDatos = useCallback(async () => {
     if (!isPremium) return;
     try {
       setLoading(true);
@@ -51,18 +62,18 @@ export function Soporte() {
         setConversacionActiva(null);
         setVista('crear');
       }
-    } catch (err: any) {
+    } catch {
       setError('Error al cargar conversaciones');
     } finally {
       setLoading(false);
     }
-  };
+  }, [isPremium]);
 
   useEffect(() => {
     if (isPremium) {
-      fetchDatos();
+      void fetchDatos();
     }
-  }, [isPremium]);
+  }, [isPremium, fetchDatos]);
 
   // SSE Setup
   useEffect(() => {
@@ -86,7 +97,7 @@ export function Soporte() {
             if (activeConvRef.current && convId === activeConvRef.current.id) {
               setMensajes((prev) => {
                 // Deduplicate
-                if (prev.some(m => m.id === newMsgObj.id || (m as any).tempId === newMsgObj.id)) return prev;
+                if (prev.some(m => m.id === newMsgObj.id || m.tempId === newMsgObj.id)) return prev;
                 
                 // Si no estamos en el fondo, aumentamos conteo de no leídos
                 if (!isAtBottomRef.current) {
@@ -133,8 +144,9 @@ export function Soporte() {
   }, [isPremium]);
 
   // Sincronización automática de respaldo cada 3 segundos
+  const activeConversationId = conversacionActiva?.id;
   useEffect(() => {
-    if (!isPremium || vista !== 'activa' || !conversacionActiva) return;
+    if (!isPremium || vista !== 'activa' || !activeConversationId) return;
 
     const interval = setInterval(async () => {
       try {
@@ -152,12 +164,12 @@ export function Soporte() {
                 } else {
                   setUnreadCount(c => c + nuevos.length);
                 }
-                return [...prev.filter(m => !(m as any).tempId), ...nuevos];
+                return [...prev.filter(m => !m.tempId), ...nuevos];
               }
               return prev;
             });
           }
-        } else if (res.cerradas && res.cerradas.some(c => c.id === conversacionActiva.id)) {
+        } else if (res.cerradas && res.cerradas.some(c => c.id === activeConversationId)) {
           setConversacionActiva(prev => prev ? { ...prev, estado: 'cerrada' } : prev);
         }
       } catch (e) {
@@ -166,7 +178,7 @@ export function Soporte() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isPremium, vista, conversacionActiva?.id]);
+  }, [isPremium, vista, activeConversationId]);
 
   // Usamos un ref para leer el estado dentro del evento de SSE
   const isAtBottomRef = useRef(true);
@@ -189,13 +201,6 @@ export function Soporte() {
     );
   }
 
-  const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      setIsAtBottom(true);
-      setUnreadCount(0);
-    }
-  };
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -220,12 +225,12 @@ export function Soporte() {
 
     try {
       setLoading(true);
-      const res = await soporteService.enviarMensaje(nuevoMensaje);
+      await soporteService.enviarMensaje(nuevoMensaje);
       setNuevoMensaje('');
       await fetchDatos();
       setVista('activa');
-    } catch (err: any) {
-      setError(err.message || 'Error al iniciar la conversación');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar la conversación');
     } finally {
       setLoading(false);
     }
@@ -259,9 +264,10 @@ export function Soporte() {
       const res = await soporteService.enviarMensaje(texto);
       if (res.mensaje) {
         setMensajes(prev => {
-          let updated = prev.map(m => (m as any).tempId === tempId ? { ...res.mensaje, tempId: undefined } : m);
-          if ((res as any).autoMensaje && !updated.some(m => m.id === (res as any).autoMensaje.id)) {
-            updated.push((res as any).autoMensaje);
+          const updated = prev.map(m => m.tempId === tempId ? { ...res.mensaje, tempId: undefined } : m);
+          const autoMensaje = res.autoMensaje;
+          if (autoMensaje && !updated.some(m => m.id === autoMensaje.id)) {
+            updated.push(autoMensaje);
           }
           return updated;
         });
@@ -276,11 +282,12 @@ export function Soporte() {
           fetchDatos();
         }
       }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.message || '';
-      const esLimite = err.response?.status === 403 || /l[íi]mite/i.test(errorMsg);
+    } catch (err: unknown) {
+      const response = axios.isAxiosError<{ error?: string }>(err) ? err.response : undefined;
+      const errorMsg = response?.data?.error || (err instanceof Error ? err.message : '');
+      const esLimite = response?.status === 403 || /l[íi]mite/i.test(errorMsg);
 
-      setMensajes(prev => prev.filter(m => (m as any).tempId !== tempId));
+      setMensajes(prev => prev.filter(m => m.tempId !== tempId));
 
       if (esLimite) {
         // Al llegar al límite, fijar el contador para mostrar el aviso amarillo sin error rojo
@@ -432,12 +439,12 @@ export function Soporte() {
                   isMine 
                     ? 'bg-apple-blue text-white rounded-br-sm' 
                     : 'bg-white dark:bg-apple-dark-bg-secondary border border-apple-border dark:border-apple-dark-border rounded-bl-sm'
-                } ${(msg as any).isSending ? 'opacity-70' : ''}`}
+                } ${msg.isSending ? 'opacity-70' : ''}`}
               >
                 <p className="whitespace-pre-wrap">{censurarGroserias(msg.mensaje)}</p>
                 <div className={`text-[10px] flex items-center justify-end gap-1 mt-1 ${isMine ? 'text-white/70' : 'text-apple-text-tertiary'}`}>
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {isMine && (msg as any).isSending && <span>Enviando...</span>}
+                  {isMine && msg.isSending && <span>Enviando...</span>}
                 </div>
               </div>
             </div>
