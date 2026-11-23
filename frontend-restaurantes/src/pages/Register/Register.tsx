@@ -2,6 +2,7 @@ import { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
+import type { AuthResponseError } from '../../services/auth';
 import { ThemeContext } from '../../context/ThemeContext';
 
 export function Register() {
@@ -23,8 +24,9 @@ export function Register() {
     try {
       await api.post('/auth/register', formData);
       navigate('/verify-email', { state: { email: formData.email } });
-    } catch (err: any) {
-      setError(err.response?.data?.mensaje || err.response?.data?.error || 'Error al registrar. Intenta de nuevo.');
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      setError(err?.response?.data?.mensaje || err?.response?.data?.error || 'Error al registrar. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }

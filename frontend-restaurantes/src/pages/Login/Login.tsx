@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { authService } from '../../services/auth';
+import { authService, type AuthResponseError } from '../../services/auth';
 import { ThemeContext } from '../../context/ThemeContext';
 import { Logo } from '../components/Logo';
 
@@ -36,12 +36,13 @@ export function Login() {
       } else {
         navigate('/descubrir');
       }
-    } catch (err: any) {
-      if (err.response?.data?.requiereVerificacion) {
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      if (err?.response?.data?.requiereVerificacion) {
         navigate('/verify-email', { state: { email } });
         return;
       }
-      setError(err.response?.data?.mensaje || 'Correo o contraseña incorrectos');
+      setError(err?.response?.data?.mensaje || 'Correo o contraseña incorrectos');
     } finally {
       setLoading(false);
     }
