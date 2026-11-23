@@ -1,5 +1,6 @@
 import { useContext, useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -13,7 +14,6 @@ import {
   Menu,
   Sun,
   Moon,
-  Home,
   MessageSquare
 } from 'lucide-react';
 import { Logo } from './Logo';
@@ -22,7 +22,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { useRestaurant } from '../../context/RestaurantContext';
 
 interface SidebarItemProps {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   ruta: string;
   active: boolean;
@@ -64,7 +64,6 @@ const SidebarItem = ({ icon: Icon, label, ruta, active, collapsed, onClick }: Si
 };
 
 export function Sidebar() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useContext(ThemeContext);
   const [collapsed, setCollapsed] = useState(false);

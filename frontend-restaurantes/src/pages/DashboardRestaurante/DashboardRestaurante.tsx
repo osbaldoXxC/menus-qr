@@ -1,16 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { restauranteService } from '../../services/restaurante';
 import { useRestaurant } from '../../context/RestaurantContext';
-import { LayoutDashboard, QrCode, Utensils, Zap, ExternalLink, Copy, Download, PlusCircle, ChevronRight } from 'lucide-react';
+import { QrCode, Utensils, Zap, ExternalLink, Copy, Download, PlusCircle, ChevronRight } from 'lucide-react';
 import { getPublicMenuUrl } from '../../utils/menuUtils';
 
+type DashboardDish = {
+  id: string;
+  nombre: string;
+  precio: number;
+  categoria?: string;
+  url_imagen?: string;
+};
+
+type DashboardQR = { qr_base64?: string; slug?: string; url_menu?: string };
+
 export function DashboardRestaurante() {
-  const navigate = useNavigate();
-  const { restaurant, limits, isPremium, loading: contextLoading } = useRestaurant();
-  const [platillos, setPlatillos] = useState<any[]>([]);
-  const [qrData, setQrData] = useState<any>(null);
+  const { restaurant, loading: contextLoading } = useRestaurant();
+  const [platillos, setPlatillos] = useState<DashboardDish[]>([]);
+  const [qrData, setQrData] = useState<DashboardQR | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -181,7 +190,7 @@ export function DashboardRestaurante() {
         </div>
         
         <div className="grid md:grid-cols-3 gap-6">
-          {platillos.slice(0, 3).map((platillo, i) => (
+          {platillos.slice(0, 3).map((platillo) => (
             <div key={platillo.id} className="p-6 rounded-[2.5rem] bg-apple-bg-secondary/50 dark:bg-apple-dark-bg-secondary/50 border border-apple-border dark:border-apple-dark-border backdrop-blur-sm group hover:bg-apple-bg-secondary dark:hover:bg-apple-dark-bg-secondary transition-all">
               <div className="w-full aspect-square rounded-2xl bg-apple-bg-tertiary mb-4 overflow-hidden border border-apple-border dark:border-apple-dark-border">
                 {platillo.url_imagen ? (

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HexColorPicker } from 'react-colorful';
 import { restauranteService } from '../../services/restaurante';
 import { useRestaurant } from '../../context/RestaurantContext';
-import { Palette, Layout, Type, Globe, CheckCircle2, AlertCircle, Upload, Image as ImageIcon, Moon, Sun, Sliders, Sparkles, Eye, EyeOff, Megaphone, Trash2, Info, X, Monitor, Smartphone, DollarSign } from 'lucide-react';
+import { Palette, Layout, Type, Globe, CheckCircle2, AlertCircle, Upload, Image as ImageIcon, Moon, Sun, Sliders, Sparkles, Megaphone, Trash2, Info, X, Monitor, Smartphone, DollarSign } from 'lucide-react';
 import { ResponsiveImageEditor } from './ResponsiveImageEditor';
 
 const LAYOUTS = [
@@ -55,7 +55,7 @@ function isColorDark(hex: string): boolean {
 function colorWithOpacity(colorStr: string, opacity: number): string {
   if (!colorStr) return `rgba(255,255,255,${opacity})`;
   if (colorStr.startsWith('rgba')) {
-    return colorStr.replace(/[\d\.]+\)$/, `${opacity})`);
+    return colorStr.replace(/[\d.]+\)$/, `${opacity})`);
   }
   if (colorStr.startsWith('rgb')) {
     return colorStr.replace('rgb', 'rgba').replace(/\)$/, `, ${opacity})`);
@@ -78,10 +78,10 @@ function colorWithOpacity(colorStr: string, opacity: number): string {
 
 export function Configuracion(): JSX.Element {
   const { isPremium } = useRestaurant();
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingBg, setUploadingBg] = useState(false);
+  const [, setUploadingBg] = useState(false);
   const [uploadingBgHorizontal, setUploadingBgHorizontal] = useState(false);
   const [uploadingBgVertical, setUploadingBgVertical] = useState(false);
   const [showPicker, setShowPicker] = useState<'primario' | 'fondo' | 'badge' | 'texto' | 'text_hover' | 'descripcion' | null>(null);
@@ -90,7 +90,6 @@ export function Configuracion(): JSX.Element {
   const [saveError, setSaveError] = useState('');
   const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bgFileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputHorizontalRef = useRef<HTMLInputElement>(null);
   const bgFileInputVerticalRef = useRef<HTMLInputElement>(null);
   
@@ -256,7 +255,7 @@ export function Configuracion(): JSX.Element {
       const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {} };
       const apariencia = { ...config.apariencia, [key]: value };
       
-      let extra: any = {};
+      const extra: any = {};
       if (key === 'color_primario') extra.color_primario = value;
       if (key === 'color_fondo') extra.color_fondo = value;
       if (key === 'fuente_familia') extra.fuente_familia = value;
@@ -295,7 +294,7 @@ export function Configuracion(): JSX.Element {
       const config = prev.config_diseno || { apariencia: {}, layout: {}, elementos_visuales: {} };
       const layout = { ...config.layout, [key]: value };
       
-      let extra: any = {};
+      const extra: any = {};
       if (key === 'layout_type_horizontal') extra.layout_type_horizontal = value;
       if (key === 'layout_type_vertical') extra.layout_type_vertical = value;
       
@@ -1844,7 +1843,6 @@ export function Configuracion(): JSX.Element {
                       const textOpHigh = theme.config_diseno?.apariencia?.color_normal || (isDark ? 'rgba(255,255,255,0.9)' : 'rgba(29,29,31,0.9)');
                       const textOpLow  = colorWithOpacity(textOpHigh, 0.55);
                      const borderOp   = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-                     const headerBg   = isDark ? 'rgba(10,10,10,0.5)' : 'rgba(255,255,255,0.5)';
                      
                      const btnRadius = theme.config_diseno?.apariencia?.border_radius_botones || '12px';
                      const cardRadius = theme.config_diseno?.apariencia?.border_radius_tarjetas || '24px';

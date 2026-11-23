@@ -54,8 +54,6 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const [limits, setLimits] = useState<Limits>(defaultLimits);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-
   const refreshRestaurant = async () => {
     const user = authService.getCurrentUser();
     if (!user.isAuthenticated || (user.rol !== 'RESTAURANTE' && user.rol !== 'SUPER_ADMIN')) {
@@ -68,7 +66,6 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('access_token');
       const res = await api.get('/restaurants/info');
       const data = res.data;
       if (data) {

@@ -1,17 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sliders,
   Copy,
   ClipboardCheck,
   RotateCcw,
-  Sparkles,
   Layers,
-  Eye,
   Maximize2,
-  Move,
-  Check,
-  Info
+  Check
 } from 'lucide-react';
 import {
   BreakpointKey,
@@ -24,14 +18,22 @@ import {
   ObjectFitValue
 } from '../../utils/responsiveImageUtils';
 
+type ResponsiveAppearance = NonNullable<Parameters<typeof getResolvedBreakpointConfig>[2]> & {
+  responsive_imagen?: ResponsiveImageMap;
+  fondo_imagen_url?: string | null;
+  fondo_imagen_horizontal_url?: string | null;
+  fondo_imagen_vertical_url?: string | null;
+  [key: string]: unknown;
+};
+
 interface ResponsiveImageEditorProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl?: string;
   horizontalImageUrl?: string;
   verticalImageUrl?: string;
-  apariencia: any;
-  onSave: (updatedApariencia: any) => void;
+  apariencia: ResponsiveAppearance;
+  onSave: (updatedApariencia: ResponsiveAppearance) => void;
 }
 
 export const ResponsiveImageEditor: React.FC<ResponsiveImageEditorProps> = ({
@@ -316,7 +318,7 @@ export const ResponsiveImageEditor: React.FC<ResponsiveImageEditorProps> = ({
     try {
       // Debug logs removed
       // Build responsive_imagen from current responsiveMap + any DOM values that differ
-      let finalMap = { ...responsiveMap };
+      const finalMap = { ...responsiveMap };
 
       // Read all current input values from DOM to capture Playwright E2E changes
       const selectElement = document.querySelector('select[data-testid="object-fit-select"]') as HTMLSelectElement;
