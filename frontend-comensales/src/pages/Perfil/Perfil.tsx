@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { authService } from '../../services/auth';
+import { authService, type AuthResponseError } from '../../services/auth';
 import { restauranteService } from '../../services/restaurante';
 import { User, Mail, Phone, Store, CreditCard, Lock, LogOut, ChevronRight, MapPin, Navigation, Map, CheckCircle2, DollarSign } from 'lucide-react';
 
 export function Perfil() {
   const navigate = useNavigate();
   const [editando, setEditando] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userData, setUserData] = useState({
     nombre: '',
@@ -309,9 +309,10 @@ export function Perfil() {
       }
       setEstablecimientoSuccess(true);
       setTimeout(() => setEstablecimientoSuccess(false), 3000);
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
       console.error('Error al guardar datos del establecimiento:', err);
-      alert(err.response?.data?.mensaje || 'Error al guardar los datos del establecimiento.');
+      alert(err?.response?.data?.mensaje || 'Error al guardar los datos del establecimiento.');
     } finally {
       setSavingEstablecimiento(false);
     }
@@ -341,9 +342,10 @@ export function Perfil() {
       });
       setMonedaSuccess(true);
       setTimeout(() => setMonedaSuccess(false), 3000);
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
       console.error('Error al guardar configuración de moneda:', err);
-      alert(err.response?.data?.mensaje || 'Error al guardar la moneda.');
+      alert(err?.response?.data?.mensaje || 'Error al guardar la moneda.');
     } finally {
       setSavingMoneda(false);
     }
@@ -360,8 +362,9 @@ export function Perfil() {
       });
       setEditando(false);
       alert('Perfil actualizado correctamente');
-    } catch (err: any) {
-      setError(err.response?.data?.mensaje || 'Error al actualizar');
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      setError(err?.response?.data?.mensaje || 'Error al actualizar');
     } finally {
       setSaving(false);
     }
@@ -382,8 +385,9 @@ export function Perfil() {
       });
       setPasswordData({ actual: '', nueva: '', confirmar: '' });
       alert('Contraseña actualizada correctamente');
-    } catch (err: any) {
-      setError(err.response?.data?.mensaje || 'Error al cambiar contraseña');
+    } catch (error: unknown) {
+      const err = error as AuthResponseError | null;
+      setError(err?.response?.data?.mensaje || 'Error al cambiar contraseña');
     } finally {
       setSaving(false);
     }
