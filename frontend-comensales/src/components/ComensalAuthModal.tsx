@@ -110,7 +110,8 @@ export function ComensalAuthModal({
         setOtpCode('');
         setMode('login');
       }
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: { code?: string; mensaje?: string } } } | null;
       const status = err?.response?.status;
       const code = err?.response?.data?.code || '';
       const serverMsg = err?.response?.data?.mensaje;

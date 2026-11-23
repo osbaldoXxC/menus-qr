@@ -26,6 +26,15 @@ export type ResponsiveImageMap = {
   [K in BreakpointKey]?: ImageBreakpointConfig;
 };
 
+type LegacyImageAppearance = {
+  fondo_imagen_zoom?: number | string | null;
+  fondo_imagen_x?: number | string | null;
+  fondo_imagen_y?: number | string | null;
+  fondo_imagen_rotate?: number | string | null;
+  fondo_imagen_fit?: string | null;
+  fondo_imagen_opacity?: number | string | null;
+};
+
 export interface BreakpointMeta {
   key: BreakpointKey;
   label: string;
@@ -74,7 +83,7 @@ export function sanitizeBreakpointConfig(
   const rotation = isNaN(Number(conf.rotation)) ? 0 : Number(conf.rotation);
   
   const validFits: ObjectFitValue[] = ['cover', 'contain', 'fill', 'none'];
-  const object_fit = validFits.includes(conf.object_fit as any) ? (conf.object_fit as ObjectFitValue) : 'cover';
+  const object_fit = conf.object_fit && validFits.includes(conf.object_fit) ? conf.object_fit : 'cover';
   
   const border_radius = Math.max(0, Math.min(500, isNaN(Number(conf.border_radius)) ? 0 : Number(conf.border_radius)));
   const opacity = Math.max(0, Math.min(100, isNaN(Number(conf.opacity)) ? 100 : Number(conf.opacity)));
@@ -115,7 +124,7 @@ export function getBreakpointFromWidth(width: number): BreakpointKey {
 export function getResolvedBreakpointConfig(
   responsiveMap: ResponsiveImageMap | undefined,
   targetBp: BreakpointKey,
-  legacyApariencia?: any
+  legacyApariencia?: LegacyImageAppearance
 ): { config: ImageBreakpointConfig; inheritedFrom: BreakpointKey | 'legacy' | 'default' } {
   const map = responsiveMap || {};
 
@@ -159,7 +168,7 @@ export function getResolvedBreakpointConfig(
     position_y: legacyY,
     scale: legacyScale,
     rotation: legacyRotate,
-    object_fit: ['cover', 'contain', 'fill', 'none'].includes(legacyFit) ? legacyFit : 'cover',
+    object_fit: ['cover', 'contain', 'fill', 'none'].includes(legacyFit) ? legacyFit as ObjectFitValue : 'cover',
     border_radius: 0,
     opacity: legacyOpacity,
     z_index: 1,

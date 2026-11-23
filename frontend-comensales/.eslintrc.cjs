@@ -5,5 +5,8 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['react-refresh'],
   ignorePatterns: ['dist', 'playwright-report', 'test-results'],
-  rules: { 'react-refresh/only-export-components': ['warn', { allowConstantExport: true }] }
+  rules: {
+    'react-hooks/exhaustive-deps': 'error',
+    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }]
+  }
 };

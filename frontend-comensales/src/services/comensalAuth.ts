@@ -66,8 +66,9 @@ export const comensalAuthService = {
     try {
       const { data } = await authClient.get<ComensalSessionResponse>('/auth/comensal/me');
       return data;
-    } catch (err: any) {
-      if (err?.response?.status === 401 && err?.response?.data?.code === 'SESSION_EXPIRED') {
+    } catch (err: unknown) {
+      const failure = err as { response?: { status?: number; data?: { code?: string } } } | null;
+      if (failure?.response?.status === 401 && failure.response.data?.code === 'SESSION_EXPIRED') {
         try {
           const refreshed = await authClient.post<ComensalSessionResponse>('/auth/comensal/refresh', {});
           return refreshed.data;

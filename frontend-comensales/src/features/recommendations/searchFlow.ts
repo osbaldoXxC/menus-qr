@@ -1,9 +1,21 @@
 import type { RecommendationResponse } from '../../services/recommendationContract';
+import type { ComensalQuota } from '../../services/comensalAuth';
+
+type ErrorResponse = {
+  data?: {
+    error?: { code?: string; message?: string };
+    code?: string;
+    status?: { message?: string };
+    mensaje?: string;
+    meta?: { quota?: ComensalQuota };
+    quota?: ComensalQuota;
+  };
+};
 
 export type SearchState =
   | { phase: 'idle' | 'loading' }
   | { phase: 'success' | 'no_verified_results'; response: RecommendationResponse }
-  | { phase: 'error'; message: string; errorCode?: string; quota?: any };
+  | { phase: 'error'; message: string; errorCode?: string; quota?: ComensalQuota };
 
 type SearchRequest = (message: string) => Promise<RecommendationResponse>;
 
@@ -17,9 +29,9 @@ function responseState(response: RecommendationResponse): SearchState {
   return { phase: 'error', message: 'El servicio devolvió una respuesta inesperada. Inténtalo de nuevo.' };
 }
 
-function parseErrorState(error: unknown): { message: string; errorCode?: string; quota?: any } {
-  if (error && typeof error === 'object' && 'response' in error && (error as { response?: any }).response) {
-    const resp = (error as { response: any }).response;
+function parseErrorState(error: unknown): { message: string; errorCode?: string; quota?: ComensalQuota } {
+  if (error && typeof error === 'object' && 'response' in error && (error as { response?: ErrorResponse }).response) {
+    const resp = (error as { response: ErrorResponse }).response;
     const data = resp?.data;
     const errorCode = data?.error?.code || data?.code;
     const serverMessage = data?.error?.message || data?.status?.message || data?.mensaje;
