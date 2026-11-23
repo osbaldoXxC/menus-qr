@@ -20,6 +20,21 @@ export interface RecommendationResponse {
   meta: { fallback: boolean; mlUsed: boolean; returned: number; limitApplied: number };
 }
 
+type WireRecommendation = {
+  dish: {
+    id: string; name: string; description?: string; price?: number; imageUrl?: string;
+    category?: string; ingredients?: string[]; dietaryTags?: string[];
+    nivel_picante?: number; porcion?: string;
+  };
+  restaurant: RecommendedRestaurant;
+  reasons: Array<{ text: string }>;
+  safety: Safety;
+};
+
+type WireResponse = Omit<RecommendationResponse, 'recommendations'> & {
+  recommendations: WireRecommendation[];
+};
+
 export function buildRecommendationRequest(input: RecommendationRequest) {
   const restrictions: Record<string, unknown> = {};
   const diets: Record<string, string> = { none: 'none', vegetarian: 'vegetarian', vegan: 'vegan',
@@ -45,18 +60,18 @@ export function recommendationUrl(base: string, restaurantId?: string) {
 }
 
 export function decodeRecommendationResponse(value: unknown): RecommendationResponse {
-  const data = value as Record<string, any>;
+  const data = value as WireResponse;
   if (!data || !Array.isArray(data.recommendations) || !data.status?.code ||
     !data.safety?.disclaimer || !data.meta || typeof data.requestId !== 'string') throw Error('Respuesta de recomendaciones inválida.');
   if (data.error) throw Error(data.error.message || 'No se pudieron obtener recomendaciones.');
-  const recommendations = data.recommendations.map((item: any) => {
+  const recommendations = data.recommendations.map((item: WireRecommendation) => {
     if (!item.dish?.id || typeof item.dish.name !== 'string' || !item.restaurant?.id ||
       !Array.isArray(item.reasons) || !item.safety?.disclaimer) throw Error('Recomendación incompleta.');
     return { dish: { id: item.dish.id, nombre: item.dish.name, descripcion: item.dish.description,
       precio: item.dish.price, url_imagen: item.dish.imageUrl, categoria_nombre: item.dish.category,
       ingredientes_principales: item.dish.ingredients, etiquetas_dieteticas: item.dish.dietaryTags,
       nivel_picante: item.dish.nivel_picante, porcion: item.dish.porcion },
-      restaurant: item.restaurant, reasons: item.reasons.map((r: any) => {
+      restaurant: item.restaurant, reasons: item.reasons.map((r: { text: string }) => {
         if (typeof r.text !== 'string') throw Error('Razón inválida.');
         return r.text;
       }), safety: item.safety };
