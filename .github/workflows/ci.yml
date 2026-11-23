@@ -46,6 +46,14 @@ jobs:
           persist-credentials: false
       - name: Detectar runtimes sin soporte
         run: python3 ci/check-supported-runtimes.py
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22.23.5'
+      - name: Revisar dependencias de producción
+        run: |
+          for app in backend frontend-comensales frontend-restaurantes admin; do
+            npm audit --omit=dev --audit-level=high --prefix "$app"
+          done
 
   backend-quality:
     runs-on: ubuntu-latest
