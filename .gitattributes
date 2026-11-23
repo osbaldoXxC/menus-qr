@@ -1,1 +1,2 @@
 ci/run-integration-suite.sh text eol=lf
+ci/test-persistence.sh text eol=lf
