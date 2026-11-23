@@ -246,9 +246,9 @@ export function PublicMenu() {
         };
 
         const cleanCategorias = data.categorias
-          .map((cat: any) => ({ ...cat, platillos: (cat.platillos || []).filter((p: any) => p.activo !== false) }))
-          .filter((cat: any) => cat.platillos.length > 0)
-          .sort((a: any, b: any) => (a.orden || 0) - (b.orden || 0));
+          .map((cat: Categoria) => ({ ...cat, platillos: (cat.platillos || []).filter((p: Platillo) => p.activo !== false) }))
+          .filter((cat: Categoria) => cat.platillos.length > 0)
+          .sort((a: Categoria, b: Categoria) => (a.orden || 0) - (b.orden || 0));
 
         setMenuData({ restaurante, categorias: cleanCategorias });
       } catch (err) {
@@ -309,7 +309,6 @@ export function PublicMenu() {
   const surface     = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
   const surfaceHover= dark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)';
   const border      = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-  const headerBg    = dark ? `${bg}cc`               : `${bg}cc`;
   const priceBadge  = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
   // Configuración de bordes, sombras y diseño
@@ -443,7 +442,7 @@ export function PublicMenu() {
                 alt=""
                 className="w-full h-full max-w-none select-none"
                 style={{
-                  objectFit: bpConfig.object_fit as any,
+                  objectFit: bpConfig.object_fit,
                   borderRadius: `${bpConfig.border_radius}px`,
                   filter: `blur(${blurVal}px) brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%)`,
                   transition: 'filter 0.3s ease',
@@ -696,7 +695,7 @@ function PlatilloCard({ platillo, layout, index, colors, onSelect }: {
   platillo: Platillo; layout: string; index: number; colors: CardColors; onSelect: () => void;
 }) {
   const { 
-    primary, textMain, textSub, surface, surfaceHover, border, priceBadge, dark,
+    primary, textMain, textSub, surface, border, priceBadge, dark,
     borderRadiusBotones, borderRadiusTarjetas, sombrasHabilitadas, glassmorphismActivo,
     tarjetaEstilo, tarjetaOpacidad, simboloMoneda, posicionMoneda
   } = colors;
@@ -975,7 +974,7 @@ function PlatilloDetailModal({ platillo, onClose, colors }: {
 
   const [selectedExtras, setSelectedExtras] = useState<Record<number, boolean>>({});
 
-  const complementosList: ComplementoObj[] = (platillo.complementos || []).map((c: any) => {
+  const complementosList: ComplementoObj[] = (platillo.complementos || []).map((c) => {
     if (typeof c === 'string') {
       return { nombre: c, precio: 0 };
     }
