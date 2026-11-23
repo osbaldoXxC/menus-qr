@@ -282,7 +282,7 @@ export default function Support() {
     const text = newMessage;
     setNewMessage('');
 
-    let targetConvId = selectedConv?.id;
+    const targetConvId = selectedConv?.id;
 
     const tempId = `temp-${Date.now()}`;
     const tempMsg: Message = {

@@ -136,8 +136,9 @@ function App() {
       localStorage.setItem('admin_rol', data.rol);
       setIsAuthenticated(true);
       fetchRestaurantes(data.access_token);
-    } catch (err: any) {
-      setLoginError(err.message || 'Error de conexión con el servidor');
+    } catch (error: unknown) {
+      const err = error as { message?: string } | null;
+      setLoginError(err?.message || 'Error de conexión con el servidor');
     } finally {
       setLoginLoading(false);
     }
@@ -158,7 +159,7 @@ function App() {
   const fetchRestaurantes = async (tokenOverride?: string) => {
     setLoading(true);
     try {
-      const headers: any = {};
+      const headers: Record<string, string> = {};
       if (tokenOverride) headers['Authorization'] = `Bearer ${tokenOverride}`;
 
       const res = await fetchWithAuth(`${API_BASE_URL}/admin/restaurants`, {
