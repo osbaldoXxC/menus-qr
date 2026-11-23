@@ -1,0 +1,37 @@
+name: MexxicanMX OIDC identity verification
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  verify-identity:
+    if: github.repository == 'osbaldoXxC/menus-qr' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Obtain credentials restricted to identity verification
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::256663926988:role/githubmexxican
+          allowed-account-ids: '256663926988'
+          role-session-name: oidc-${{ github.run_id }}
+          inline-session-policy: >-
+            {"Version":"2012-10-17","Statement":[{"Effect":"Deny","Action":"*","Resource":"*"}]}
+      - name: Verify account and assumed role
+        shell: bash
+        env:
+          EXPECTED_SESSION: oidc-${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          identity=$(aws sts get-caller-identity --output json)
+          account=$(jq -r '.Account' <<< "$identity")
+          arn=$(jq -r '.Arn' <<< "$identity")
+          test "$account" = '256663926988'
+          test "$arn" = "arn:aws:sts::256663926988:assumed-role/githubmexxican/$EXPECTED_SESSION"
+          echo "Verified AWS identity: $arn"
