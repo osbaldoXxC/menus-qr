@@ -53,7 +53,7 @@ resource "aws_iam_role_policy" "mexxicanmx_cd" {
         Sid      = "StaticFrontendObjects"
         Effect   = "Allow"
         Action   = ["s3:PutObject", "s3:GetObject"]
-        Resource = concat(["arn:aws:s3:::oamdevsol-restaurant-256663926988/index.html", "arn:aws:s3:::oamdevsol-restaurant-256663926988/releases/*", "arn:aws:s3:::oamdevsol-admin-256663926988/index.html", "arn:aws:s3:::oamdevsol-admin-256663926988/releases/*"], var.diner_bucket_name != "" ? ["arn:aws:s3:::${var.diner_bucket_name}/index.html", "arn:aws:s3:::${var.diner_bucket_name}/releases/*"] : [])
+        Resource = concat(["arn:aws:s3:::oamdevsol-restaurant-256663926988/index.html", "arn:aws:s3:::oamdevsol-restaurant-256663926988/releases/*", "arn:aws:s3:::oamdevsol-admin-256663926988/index.html", "arn:aws:s3:::oamdevsol-admin-256663926988/releases/*"], ["${aws_s3_bucket.diner.arn}/index.html", "${aws_s3_bucket.diner.arn}/releases/*"])
       },
       {
         Sid      = "RunOnlyDeploymentDocumentOnTarget"
@@ -66,7 +66,7 @@ resource "aws_iam_role_policy" "mexxicanmx_cd" {
         Sid      = "InvalidateKnownFrontends"
         Effect   = "Allow"
         Action   = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
-        Resource = concat(["arn:aws:cloudfront::256663926988:distribution/E1K516ITL1YDZ3", "arn:aws:cloudfront::256663926988:distribution/E1NK74NZM8UYXZ"], var.diner_distribution_id != "" ? ["arn:aws:cloudfront::256663926988:distribution/${var.diner_distribution_id}"] : [])
+        Resource = concat(["arn:aws:cloudfront::256663926988:distribution/E1K516ITL1YDZ3", "arn:aws:cloudfront::256663926988:distribution/E1NK74NZM8UYXZ"], [aws_cloudfront_distribution.diner.arn])
       }
     ]
   })
