@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './Support.css';
 import { fetchWithAuth } from '../../services/api';
 
@@ -9,6 +9,25 @@ interface Restaurante {
   plan: string;
   estado: string;
 }
+
+type ApiConversation = {
+  id: string;
+  restaurante_id?: string;
+  email?: string;
+  restaurantName?: string;
+  nombre_negocio?: string;
+  ownerName?: string;
+  nombre_dueno?: string;
+  plan?: string;
+  fecha_actualizacion?: string;
+  updated_at?: string;
+  estado?: string;
+  mensajes_sin_leer?: number;
+  calificacion?: number | null;
+  rating?: number | null;
+  comentario?: string | null;
+  feedback?: string | null;
+};
 
 export interface Conversation {
   id: string | null;
@@ -73,17 +92,15 @@ export default function Support() {
 
 
 
-  const fetchAllData = async () => {
-    try {
-      setLoading(true);
-      const resRest = await fetchWithAuth(`${API_BASE_URL}/admin/restaurants`);
+  const loadAllData = useCallback(() => {
+    return fetchWithAuth(`${API_BASE_URL}/admin/restaurants`).then(async (resRest) => {
       const restaurantes: Restaurante[] = await resRest.json();
       
       const resConv = await fetchWithAuth(`${API_BASE_URL}/support/admin/conversaciones`);
       const convData = await resConv.json();
       const activeConvs = Array.isArray(convData) ? convData : (convData.conversations || []);
 
-      const merged: Conversation[] = activeConvs.map((found: any) => {
+      const merged: Conversation[] = activeConvs.map((found: ApiConversation) => {
         const r = restaurantes.find(rest => rest.id === found.restaurante_id || rest.email === found.email) || {} as Restaurante;
         return {
           id: found.id,
@@ -101,22 +118,21 @@ export default function Support() {
       });
 
       setConversations(merged);
-    } catch (err) {
-      console.error('Error fetching data', err);
-    } finally {
-      setLoading(false);
-    }
+    }).catch((err: unknown) => console.error('Error fetching data', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const fetchAllData = () => {
+    setLoading(true);
+    void loadAllData();
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    fetchAllData();
-  }, []);
+    void loadAllData();
+  }, [loadAllData]);
 
-  const fetchDashboard = async () => {
-    setLoadingDashboard(true);
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/support/admin/dashboard`);
+  const fetchDashboard = useCallback(() => {
+    return fetchWithAuth(`${API_BASE_URL}/support/admin/dashboard`).then(async (res) => {
       if (res.ok) {
         const data = await res.json();
         setDashboardData({
@@ -127,18 +143,15 @@ export default function Support() {
           activeTickets: data.activeTickets || 0,
         });
       }
-    } catch (err) {
-      console.error('Error fetching dashboard', err);
-    } finally {
-      setLoadingDashboard(false);
-    }
-  };
+    }).catch((err: unknown) => console.error('Error fetching dashboard', err))
+      .finally(() => setLoadingDashboard(false));
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'metricas') {
-      fetchDashboard();
+      void fetchDashboard();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchDashboard]);
 
   // --------------- SSE LOGIC ---------------
   useEffect(() => {
@@ -242,7 +255,7 @@ export default function Support() {
     }
   };
 
-  const fetchMessages = async (convId: string) => {
+  const fetchMessages = useCallback(async (convId: string) => {
     setLoadingChat(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/support/admin/conversacion/${convId}`);
@@ -263,7 +276,7 @@ export default function Support() {
     } finally {
       setLoadingChat(false);
     }
-  };
+  }, [selectedConv?.restaurantName]);
 
   // Sincronización suave cada 3 segundos para la conversación activa del Admin
   useEffect(() => {
@@ -273,7 +286,7 @@ export default function Support() {
       fetchMessages(convId);
     }, 3000);
     return () => clearInterval(interval);
-  }, [selectedConv?.id]);
+  }, [selectedConv?.id, fetchMessages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,7 +424,7 @@ export default function Support() {
             </button>
             <button 
               className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'metricas' ? 'bg-white dark:bg-[#2a2a2a] shadow text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
-              onClick={() => { setActiveTab('metricas'); setSelectedConv(null); }}
+              onClick={() => { if (activeTab !== 'metricas') setLoadingDashboard(true); setActiveTab('metricas'); setSelectedConv(null); }}
             >
               Métricas
             </button>

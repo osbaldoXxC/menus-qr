@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import Support from './pages/Support/Support';
 import { fetchWithAuth } from './services/api';
@@ -79,14 +79,18 @@ const AlertIcon = ({ className }: { className?: string }) => (
 );
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(
+    localStorage.getItem('admin_access_token') && localStorage.getItem('admin_rol') === 'SUPER_ADMIN'
+  ));
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
   const [restaurants, setRestaurants] = useState<Restaurante[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(
+    localStorage.getItem('admin_access_token') && localStorage.getItem('admin_rol') === 'SUPER_ADMIN'
+  ));
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'todos' | 'pendientes' | 'aprobados' | 'suspendidos' | 'soporte'>('todos');
   const [daysInput, setDaysInput] = useState<{ [id: string]: number }>({});
@@ -97,20 +101,39 @@ function App() {
   const [selectedRestaurante, setSelectedRestaurante] = useState<Restaurante | null>(null);
   const [suspendingLoading, setSuspendingLoading] = useState(false);
 
+  const fetchRestaurantes = useCallback((tokenOverride?: string) => {
+    const headers: Record<string, string> = {};
+    if (tokenOverride) headers['Authorization'] = `Bearer ${tokenOverride}`;
+    return fetchWithAuth(`${API_BASE_URL}/admin/restaurants`, { headers })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.mensaje || 'Error al obtener restaurantes');
+        setRestaurants(data);
+        const initialDays: { [id: string]: number } = {};
+        const initialPlans: { [id: string]: string } = {};
+        data.forEach((r: Restaurante) => {
+          initialDays[r.id] = r.dias_licencia > 0 ? r.dias_licencia : 30;
+          initialPlans[r.id] = r.plan || 'basico';
+        });
+        setDaysInput(initialDays);
+        setPlanInput(initialPlans);
+      })
+      .catch((err: unknown) => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem('admin_access_token');
     const rol = localStorage.getItem('admin_rol');
     if (token && rol === 'SUPER_ADMIN') {
-      setIsAuthenticated(true);
-      fetchRestaurantes(token);
+      void fetchRestaurantes(token);
     } else {
       if (rol && rol !== 'SUPER_ADMIN') {
         localStorage.removeItem('admin_access_token');
         localStorage.removeItem('admin_rol');
       }
-      setLoading(false);
     }
-  }, []);
+  }, [fetchRestaurantes]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +158,7 @@ function App() {
       localStorage.setItem('admin_access_token', data.access_token);
       localStorage.setItem('admin_rol', data.rol);
       setIsAuthenticated(true);
+      setLoading(true);
       fetchRestaurantes(data.access_token);
     } catch (error: unknown) {
       const err = error as { message?: string } | null;
@@ -156,38 +180,6 @@ function App() {
     setRestaurants([]);
   };
 
-  const fetchRestaurantes = async (tokenOverride?: string) => {
-    setLoading(true);
-    try {
-      const headers: Record<string, string> = {};
-      if (tokenOverride) headers['Authorization'] = `Bearer ${tokenOverride}`;
-
-      const res = await fetchWithAuth(`${API_BASE_URL}/admin/restaurants`, {
-        headers
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.mensaje || 'Error al obtener restaurantes');
-      }
-
-      setRestaurants(data);
-      // Inicializar el input de días y plan para cada restaurante
-      const initialDays: { [id: string]: number } = {};
-      const initialPlans: { [id: string]: string } = {};
-      data.forEach((r: Restaurante) => {
-        initialDays[r.id] = r.dias_licencia > 0 ? r.dias_licencia : 30;
-        initialPlans[r.id] = r.plan || 'basico';
-      });
-      setDaysInput(initialDays);
-      setPlanInput(initialPlans);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleApprove = async (id: string) => {
     const dias = daysInput[id] || 30;
     const plan = planInput[id] || 'basico';
@@ -204,6 +196,7 @@ function App() {
       }
 
       alert('Restaurante aprobado correctamente.');
+      setLoading(true);
       fetchRestaurantes();
     } catch (err) {
       console.error(err);
@@ -228,6 +221,7 @@ function App() {
       setShowSuspendModal(false);
       setSelectedRestaurante(null);
       alert('Kill Switch ejecutado: Acceso cancelado, platillos pausados y caché eliminada.');
+      setLoading(true);
       fetchRestaurantes();
     } catch (err) {
       console.error(err);
