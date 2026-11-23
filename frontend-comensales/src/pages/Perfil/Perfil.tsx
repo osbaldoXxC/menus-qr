@@ -5,6 +5,26 @@ import { authService, type AuthResponseError } from '../../services/auth';
 import { restauranteService } from '../../services/restaurante';
 import { User, Mail, Phone, Store, CreditCard, Lock, LogOut, ChevronRight, MapPin, Navigation, Map, CheckCircle2, DollarSign } from 'lucide-react';
 
+type MapPoint = { lat: number; lng: number };
+type LeafletMap = {
+  remove: () => void;
+  setView: (point: [number, number], zoom: number) => LeafletMap;
+  on: (event: 'click', callback: (event: { latlng: MapPoint }) => void) => void;
+};
+type LeafletMarker = {
+  addTo: (map: LeafletMap) => LeafletMarker;
+  on: (event: 'dragend', callback: () => void) => void;
+  getLatLng: () => MapPoint;
+  setLatLng: (point: [number, number]) => void;
+};
+type LeafletApi = {
+  Icon: { Default: { prototype: { _getIconUrl?: unknown }; mergeOptions: (options: Record<string, string>) => void } };
+  map: (elementId: string) => LeafletMap;
+  marker: (point: [number, number], options: { draggable: boolean }) => LeafletMarker;
+  tileLayer: (url: string, options: { attribution: string }) => { addTo: (map: LeafletMap) => unknown };
+};
+type DesignConfig = Record<string, unknown> & { informacion?: Record<string, unknown> };
+
 export function Perfil() {
   const navigate = useNavigate();
   const [editando, setEditando] = useState(false);
@@ -32,14 +52,14 @@ export function Perfil() {
     direccion: '',
     ambiente: 'Familiar',
   });
-  const [configDisenoFull, setConfigDisenoFull] = useState<any>({});
+  const [configDisenoFull, setConfigDisenoFull] = useState<DesignConfig>({});
   const [savingEstablecimiento, setSavingEstablecimiento] = useState(false);
   const [establecimientoSuccess, setEstablecimientoSuccess] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [loadingMap, setLoadingMap] = useState(false);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const markerRef = useRef<LeafletMarker | null>(null);
 
   // Estado para Moneda y Formato de Precios
   const [moneda, setMoneda] = useState({
@@ -92,10 +112,11 @@ export function Perfil() {
     }
   };
 
-  const cargarLeaflet = (): Promise<any> => {
+  const cargarLeaflet = (): Promise<LeafletApi> => {
     return new Promise((resolve, reject) => {
-      if ((window as any).L) {
-        resolve((window as any).L);
+      const leafletWindow = window as Window & { L?: LeafletApi };
+      if (leafletWindow.L) {
+        resolve(leafletWindow.L);
         return;
       }
 
@@ -111,7 +132,7 @@ export function Perfil() {
       script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       script.async = true;
       script.onload = () => {
-        resolve((window as any).L);
+        resolve(leafletWindow.L as LeafletApi);
       };
       script.onerror = (err) => {
         reject(err);
@@ -134,7 +155,7 @@ export function Perfil() {
           mapInstanceRef.current = null;
         }
 
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
           iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -177,7 +198,7 @@ export function Perfil() {
           actualizarDireccionDesdeCoordenadas(position.lat, position.lng);
         });
 
-        map.on('click', function (e: any) {
+        map.on('click', function (e) {
           const { lat, lng } = e.latlng;
           marker.setLatLng([lat, lng]);
           actualizarDireccionDesdeCoordenadas(lat, lng);
