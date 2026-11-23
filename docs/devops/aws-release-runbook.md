@@ -7,9 +7,9 @@ El flujo `cd-production.yml` se inicia manualmente en `main`, exige un CI satisf
 - Restaurante: `app.oamdevsol.site`, bucket `oamdevsol-restaurant-256663926988`, distribución `E1K516ITL1YDZ3`.
 - Administración: `panel.oamdevsol.site`, bucket `oamdevsol-admin-256663926988`, distribución `E1NK74NZM8UYXZ`.
 - API: `backend.oamdevsol.site`, EC2 `i-000928567783f36af`, región `us-east-1`.
-- Comensales: no se encontró un destino SPA separado. Una opción para revisar es `menu.oamdevsol.site` con el certificado comodín existente y una distribución dedicada; definir su bucket, política de acceso, enrutamiento de SPA y DNS antes de continuar. No se ha creado ningún recurso ni cambiado DNS. El flujo exige bucket y distribución distintos de restaurante y administración, y un `index.html` inicial que pueda respaldar.
+- Comensales: Terraform prepara el bucket privado versionado `oamdevsol-diner-256663926988` y una distribución SPA dedicada para `menu.oamdevsol.site`, con el certificado comodín existente. La distribución debe estar desplegada, debe prepararse su `index.html` inicial y falta el registro DNS antes de publicar la aplicación.
 - Crear el entorno GitHub `production` con revisores obligatorios. Configurar allí `MEXXICANMX_DINER_BUCKET`, `MEXXICANMX_DINER_DISTRIBUTION`, `MEXXICANMX_DINER_URL` y `MEXXICANMX_PUBLIC_MENU_URL`; la última debe ser la URL del comensal seguida de `/menu`.
-- El rol Terraform `mexxicanmx-ci-deploy` y el documento `MexxicanMX-DeployRelease` no existen todavía. Configurar las variables Terraform `diner_bucket_name` y `diner_distribution_id`, revisar el plan actualizado y solicitar aprobación antes de aplicarlo. Se conserva el rol legado `aws-git` y la política compartida con `githubmexxican`.
+- El rol Terraform `mexxicanmx-ci-deploy` y el documento `MexxicanMX-DeployRelease` ya se crearon. Se conserva el rol legado `aws-git` y la política compartida con `githubmexxican`. Revisar el estado y cualquier nuevo plan antes de aplicarlo.
 
 ## Artefactos y recuperación
 
@@ -22,6 +22,6 @@ El respaldo de base de datos está en el mismo EBS que la base: permite recupera
 ## Orden de aprobación
 
 1. Revisar el commit candidato y autorizar únicamente el push de su rama y, si se desea, el PR en borrador.
-2. Después de un CI remoto satisfactorio, revisar por separado el merge y la configuración del destino de comensales, DNS y protección del entorno.
-3. Generar un plan Terraform con los identificadores finales; autorizar y aplicar ese plan por separado. No modificar ni desvincular políticas compartidas.
+2. Después de un CI remoto satisfactorio, verificar el destino de comensales, DNS y protección del entorno antes del merge.
+3. Revisar cualquier nuevo plan Terraform antes de aplicarlo. No modificar ni desvincular políticas compartidas.
 4. Solo tras CI verde, OIDC real, restauración y preflight verificables, autorizar explícitamente el lanzamiento de `cd-production.yml` y aprobar el entorno protegido.
