@@ -3,11 +3,13 @@ import { MessageSquare, Send, AlertCircle, Plus, Star, X } from 'lucide-react';
 import { soporteService, ConversacionSoporte, MensajeSoporte } from '../../services/soporte';
 import { useRestaurant } from '../../context/RestaurantContext';
 
+type MensajeVisible = MensajeSoporte & { isSending?: boolean; tempId?: string };
+
 export function Soporte() {
   const { isPremium } = useRestaurant();
   const [conversacionActiva, setConversacionActiva] = useState<ConversacionSoporte | null>(null);
   const [conversacionesCerradas, setConversacionesCerradas] = useState<ConversacionSoporte[]>([]);
-  const [mensajes, setMensajes] = useState<MensajeSoporte[]>([]);
+  const [mensajes, setMensajes] = useState<MensajeVisible[]>([]);
   
   const [nuevoMensaje, setNuevoMensaje] = useState('');
   
@@ -50,7 +52,7 @@ export function Soporte() {
         setConversacionActiva(null);
         setVista('crear');
       }
-    } catch (err: any) {
+    } catch {
       setError('Error al cargar conversaciones');
     } finally {
       setLoading(false);
@@ -85,7 +87,7 @@ export function Soporte() {
             if (activeConvRef.current && convId === activeConvRef.current.id) {
               setMensajes((prev) => {
                 // Deduplicate
-                if (prev.some(m => m.id === newMsgObj.id || (m as any).tempId === newMsgObj.id)) return prev;
+                if (prev.some(m => m.id === newMsgObj.id || m.tempId === newMsgObj.id)) return prev;
                 
                 // Si no estamos en el fondo, aumentamos conteo de no leídos
                 if (!isAtBottomRef.current) {
@@ -183,12 +185,13 @@ export function Soporte() {
 
     try {
       setLoading(true);
-      const res = await soporteService.enviarMensaje(nuevoMensaje);
+      await soporteService.enviarMensaje(nuevoMensaje);
       setNuevoMensaje('');
       await fetchDatos();
       setVista('activa');
-    } catch (err: any) {
-      setError(err.message || 'Error al iniciar la conversación');
+    } catch (error: unknown) {
+      const err = error as { message?: string } | null;
+      setError(err?.message || 'Error al iniciar la conversación');
     } finally {
       setLoading(false);
     }
@@ -221,7 +224,7 @@ export function Soporte() {
     try {
       const res = await soporteService.enviarMensaje(texto);
       if (res.mensaje) {
-        setMensajes(prev => prev.map(m => (m as any).tempId === tempId ? { ...res.mensaje, tempId: undefined } : m));
+        setMensajes(prev => prev.map(m => m.tempId === tempId ? { ...res.mensaje, tempId: undefined } : m));
         // We might need to update the unread count or mensajes_restaurante_count by refetching conv
         if (!conversacionActiva) {
           fetchDatos();
@@ -230,7 +233,7 @@ export function Soporte() {
     } catch (err) {
       setError('Error al enviar. Intenta de nuevo.');
       setNuevoMensaje(texto); // restore
-      setMensajes(prev => prev.filter(m => (m as any).tempId !== tempId));
+      setMensajes(prev => prev.filter(m => m.tempId !== tempId));
     } finally {
       setSending(false);
     }
@@ -373,12 +376,12 @@ export function Soporte() {
                   isMine 
                     ? 'bg-apple-blue text-white rounded-br-sm' 
                     : 'bg-white dark:bg-apple-dark-bg-secondary border border-apple-border dark:border-apple-dark-border rounded-bl-sm'
-                } ${(msg as any).isSending ? 'opacity-70' : ''}`}
+                } ${msg.isSending ? 'opacity-70' : ''}`}
               >
                 <p className="whitespace-pre-wrap">{msg.mensaje}</p>
                 <div className={`text-[10px] flex items-center justify-end gap-1 mt-1 ${isMine ? 'text-white/70' : 'text-apple-text-tertiary'}`}>
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {isMine && (msg as any).isSending && <span>Enviando...</span>}
+                  {isMine && msg.isSending && <span>Enviando...</span>}
                 </div>
               </div>
             </div>
